@@ -63,7 +63,7 @@ struct AddAccountView: View {
                                         .padding(.leading, 4)
                                     
                                     HStack(spacing: 4) {
-                                        Text("$")
+                                        Text(CurrencyManager.shared.getSymbol(for: CurrencyManager.shared.currencyCode))
                                             .font(Theme.Fonts.display(20))
                                             .foregroundStyle(Theme.Colors.secondaryText)
                                         
@@ -234,7 +234,7 @@ struct AccountPreviewCard: View {
                 .foregroundStyle(Theme.Colors.secondaryText)
                 .lineLimit(1)
             
-            Text(String(format: "$%.2f", balance))
+            Text(balance.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                 .font(Theme.Fonts.display(20))
                 .foregroundStyle(Theme.Colors.primaryText)
                 .minimumScaleFactor(0.8)

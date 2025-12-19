@@ -63,7 +63,7 @@ struct AddCategoryView: View {
                                 .padding(.horizontal)
                             
                             HStack {
-                                Text("$")
+                                Text(CurrencyManager.shared.getSymbol(for: CurrencyManager.shared.currencyCode))
                                     .font(Theme.Fonts.display(24))
                                     .foregroundStyle(Theme.Colors.secondaryText)
                                 

@@ -24,7 +24,7 @@ struct AccountsView: View {
                                 .font(Theme.Fonts.body(14))
                                 .foregroundStyle(Theme.Colors.secondaryText)
                             
-                            Text(String(format: "$%.2f", totalBalance))
+                            Text(totalBalance.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                                 .font(Theme.Fonts.display(32))
                                 .foregroundStyle(Theme.Colors.primaryText)
                         }
@@ -107,7 +107,7 @@ struct AccountCard: View {
                 .foregroundStyle(Theme.Colors.secondaryText)
                 .lineLimit(1)
             
-            Text(String(format: "$%.2f", account.balance))
+            Text(account.balance.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                 .font(Theme.Fonts.display(20))
                 .foregroundStyle(Theme.Colors.primaryText)
                 .minimumScaleFactor(0.8)
@@ -136,7 +136,7 @@ struct ArchivedAccountRow: View {
             
             Spacer()
             
-            Text(String(format: "$%.2f", account.balance))
+            Text(account.balance.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                 .font(Theme.Fonts.body(16))
                 .foregroundStyle(Theme.Colors.secondaryText)
         }

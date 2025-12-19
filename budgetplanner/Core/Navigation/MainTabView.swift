@@ -42,8 +42,8 @@ struct MainTabView: View {
                     HStack {
                         TabBarButton(icon: "plus.circle", title: "Add", tab: .add, selectedTab: $selectedTab)
                         TabBarButton(icon: "creditcard", title: "Accounts", tab: .accounts, selectedTab: $selectedTab)
-                        TabBarButton(icon: "chart.pie", title: "Analysis", tab: .analysis, selectedTab: $selectedTab)
                         TabBarButton(icon: "list.bullet.rectangle", title: "Budget", tab: .budget, selectedTab: $selectedTab)
+                        TabBarButton(icon: "chart.pie", title: "Analytics", tab: .analysis, selectedTab: $selectedTab)
                         TabBarButton(icon: "gearshape", title: "Settings", tab: .settings, selectedTab: $selectedTab)
                     }
                     .padding(.top, 10)

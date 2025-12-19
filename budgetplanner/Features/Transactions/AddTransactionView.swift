@@ -208,8 +208,9 @@ struct AddTransactionView: View {
     // MARK: - Helpers
     
     private var currencyString: String {
-        if amountString.isEmpty { return "$0" }
-        return "$" + amountString
+        let symbol = CurrencyManager.shared.getSymbol(for: CurrencyManager.shared.currencyCode)
+        if amountString.isEmpty { return "\(symbol)0" }
+        return symbol + amountString
     }
     
     private var typeColor: Color {

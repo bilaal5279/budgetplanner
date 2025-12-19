@@ -65,10 +65,7 @@ struct DashboardView: View {
     }
     
     private func formatCurrency(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: NSNumber(value: value)) ?? "$0.00"
+        return value.formatted(.currency(code: CurrencyManager.shared.currencyCode))
     }
     
     private func groupedTransactions() -> [(date: Date, transactions: [Transaction])] {
@@ -115,7 +112,7 @@ struct TransactionRow: View {
             
             Spacer()
             
-            Text((transaction.type == .expense ? "-" : "+") + String(format: "$%.2f", transaction.amount))
+            Text((transaction.type == .expense ? "-" : "+") + transaction.amount.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                 .font(Theme.Fonts.display(16))
                 .foregroundStyle(transaction.type == .expense ? Theme.Colors.primaryText : Theme.Colors.mint)
         }

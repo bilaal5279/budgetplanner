@@ -216,7 +216,7 @@ struct BudgetListView: View {
                 Text("This budget is for a previous period. Changes will only affect this period and won't change your current or future budgets.")
             }
             .fullScreenCover(item: $categoryToEdit) { category in
-                SetBudgetView(category: category, periodStart: periodDateRange.start)
+                SetBudgetView(category: category, periodStart: periodDateRange.start, budgetPeriod: budgetPeriod)
             }
         }
     }
@@ -268,7 +268,8 @@ struct BudgetListView: View {
         // Find latest history that starts on or before current period start
         let sortedHistory = category.budgetHistory?.sorted(by: { $0.startDate > $1.startDate }) ?? []
         if let match = sortedHistory.first(where: { $0.startDate <= periodDateRange.start }) {
-            return match.amount
+            // Treat 0 as "No Budget"
+            return match.amount > 0.01 ? match.amount : nil
         }
         // Fallback to legacy limit if exists and no history overrides it?
         // Or assume legacy limit applies from infinite past?
@@ -343,12 +344,12 @@ struct BudgetGridItem: View {
                     .lineLimit(1)
                 
                 if let limit = budgetLimit {
-                    Text("\(String(format: "$%.0f", spent)) / \(String(format: "$%.0f", limit))")
+                    Text("\(spent.formatted(.currency(code: CurrencyManager.shared.currencyCode))) / \(limit.formatted(.currency(code: CurrencyManager.shared.currencyCode)))")
                         .font(Theme.Fonts.body(12))
                         .foregroundStyle(Theme.Colors.secondaryText)
                 } else {
                     if spent > 0 {
-                        Text(String(format: "$%.0f", spent))
+                        Text(spent.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                             .font(Theme.Fonts.body(12))
                             .foregroundStyle(Theme.Colors.secondaryText)
                     }
@@ -430,7 +431,7 @@ struct BudgetSummaryCard: View {
                     Text("Total Spent")
                         .font(Theme.Fonts.body(14))
                         .foregroundStyle(Color.white.opacity(0.7))
-                    Text(String(format: "$%.2f", totalSpent))
+                    Text(totalSpent.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                         .font(Theme.Fonts.display(28))
                         .foregroundStyle(Color.white)
                 }
@@ -440,7 +441,7 @@ struct BudgetSummaryCard: View {
                         Text("Budget")
                             .font(Theme.Fonts.body(12))
                             .foregroundStyle(Color.white.opacity(0.7))
-                        Text(String(format: "$%.0f", totalBudget))
+                        Text(totalBudget.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                             .font(Theme.Fonts.body(16))
                             .foregroundStyle(Color.white.opacity(0.9))
                     }

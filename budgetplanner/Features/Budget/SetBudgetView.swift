@@ -6,7 +6,14 @@ struct SetBudgetView: View {
     @Environment(\.dismiss) var dismiss
     
     var periodStart: Date
+    var budgetPeriod: String
     @Environment(\.modelContext) private var context
+    
+    init(category: Category, periodStart: Date, budgetPeriod: String) {
+        self.category = category
+        self.periodStart = periodStart
+        self.budgetPeriod = budgetPeriod
+    }
     
     @State private var amountString: String = ""
     
@@ -71,14 +78,9 @@ struct SetBudgetView: View {
                 
                 ToolbarItem(placement: .destructiveAction) {
                     Button("Remove Limit") {
-                        // Remove history for this period, or all?
-                        // Context: "Disable changing them for those periods".
-                        // Logic: Remove EFFECTIVE budget history for this specific start date if it matches exactly.
-                        if let history = category.budgetHistory?.first(where: { Calendar.current.isDate($0.startDate, equalTo: periodStart, toGranularity: .day) }) {
-                            category.budgetHistory?.removeAll(where: { $0.id == history.id })
-                            context.delete(history)
-                        }
-                        dismiss()
+                        // "Remove Limit" means set budget to 0 for this period
+                        amountString = "0"
+                        saveBudget()
                     }
                     .foregroundStyle(Theme.Colors.coral)
                 }
@@ -102,24 +104,79 @@ struct SetBudgetView: View {
     }
     
     private var currencyString: String {
-        if amountString.isEmpty { return "$0" }
-        return "$" + amountString
+        let symbol = CurrencyManager.shared.getSymbol(for: CurrencyManager.shared.currencyCode)
+        if amountString.isEmpty { return "\(symbol)0" }
+        return symbol + amountString
     }
     
     private func saveBudget() {
         guard let amount = Double(amountString) else { return }
+        let calendar = Calendar.current
         
-        // check if we have an entry for exactly this date
+        // CHECKPOINTING LOGIC
+        // If we are editing a PAST period, we must ensure that the NEXT period 
+        // has an explicit history entry so that this change doesn't propagate forward.
+        // Unless the next period is ALSO in the past? No, the user wants "this period only".
+        
+        // 1. Calculate next period start
+        let nextStart: Date
+        if budgetPeriod == "week" {
+            nextStart = calendar.date(byAdding: .weekOfYear, value: 1, to: periodStart)!
+        } else {
+            nextStart = calendar.date(byAdding: .month, value: 1, to: periodStart)!
+        }
+        
+        // 2. Check if we need to secure the future state
+        // Only if periodStart is strictly BEFORE the current period start.
+        // Actually, logic is: Update this period. 
+        // If next period doesn't have an explicit entry, it relies on this one (or older).
+        // If we change this one, next period changes too (inheritance).
+        // To genericize: "Changes will only affect this period".
+        // So we must snapshot the OLD effective budget into the next period, IF it doesn't have one.
+        
+        // Is periodStart < Current Period Start? (Roughly, is it past?)
+        // Let's just always enforce "Next Period Checkpoint" if next period <= today?
+        // Simpler: If sorting by date, check if there is an entry at or after nextStart.
+        // Actually, just check exactly nextStart. If not there, insert "old effective".
+        
+        let sortedHistory = category.budgetHistory?.sorted(by: { $0.startDate > $1.startDate }) ?? []
+        
+        // Check if next period has an entry
+        let hasNextEntry = sortedHistory.contains(where: { calendar.isDate($0.startDate, equalTo: nextStart, toGranularity: .day) })
+        
+        if !hasNextEntry {
+            // Check if nextStart is in the future relative to "Now"? 
+            // If I edit August, and it's December. I need to checkpoint September.
+            // If I edit December (Current), Next is Jan. Jan is future. Maybe I WANT Jan to change?
+            // User requirement: "wont affect the new budgets unless they go to the new period".
+            // Implies: If I change Current, Future changes. If I change Past, Future (relative to Past) shouldn't change.
+            
+            // So, check if periodStart is in the PAST relative to TODAY.
+            let isPastEdit = periodStart < calendar.date(byAdding: .day, value: -1, to: Date())! // Rough check or use startOfDay
+            
+            if isPastEdit {
+                // Determine what the budgets was effectively for the next period BEFORE this edit
+                // Which is the same as effective budget for this period BEFORE this edit.
+                // We find the effective amount currently.
+                 if let match = sortedHistory.first(where: { $0.startDate <= periodStart }) {
+                     let oldAmount = match.amount
+                     // Create checkpoint for next period
+                     let checkpoint = BudgetHistory(amount: oldAmount, startDate: nextStart)
+                     category.budgetHistory?.append(checkpoint)
+                 } else if let legacy = category.budgetLimit {
+                     let checkpoint = BudgetHistory(amount: legacy, startDate: nextStart)
+                     category.budgetHistory?.append(checkpoint)
+                 }
+            }
+        }
+        
+        // NOW apply the change to THIS period
         if let existing = category.budgetHistory?.first(where: { Calendar.current.isDate($0.startDate, equalTo: periodStart, toGranularity: .day) }) {
             existing.amount = amount
         } else {
             let newHistory = BudgetHistory(amount: amount, startDate: periodStart)
             category.budgetHistory?.append(newHistory)
         }
-        
-        // Still update legacy for fallback/backward compat if needed, or leave it?
-        // Let's update it to be the "latest" known value roughly, or just ignore it.
-        // Best to ignore it and rely on history relative to Now.
         
         dismiss()
     }

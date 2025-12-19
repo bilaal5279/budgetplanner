@@ -5,159 +5,419 @@ import Charts
 struct AnalysisView: View {
     @Query(sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     
-    enum TimePeriod: String, CaseIterable, Identifiable {
-        case week = "Week"
-        case month = "Month"
-        case year = "Year"
-        var id: String { rawValue }
+    @State private var selectedTab: AnalysisTab = .expense
+    @State private var currentDate: Date = Date()
+    @State private var periodType: NavigationPeriod = .month
+    @State private var chartType: AnalysisChartType = .bar
+    
+    // Interactive Chart State
+    @State private var selectedChartDate: Date?
+    @State private var selectedChartAmount: Double?
+    
+    // MARK: - Computed Data
+    
+    // Current Period Range
+    var currentRange: (start: Date, end: Date) {
+        (currentDate.startOfPeriod(periodType), currentDate.endOfPeriod(periodType))
     }
     
-    @State private var selectedPeriod: TimePeriod = .month
+    // Previous Period Range (for trends)
+    var previousRange: (start: Date, end: Date) {
+        // Map periodType to AnalysisPeriod logic or do it here
+        // Using simple date math for now corresponding to AnalysisPeriod logic
+        mapToAnalysisPeriod(periodType).previousPeriodRange(from: currentRange.start)
+    }
     
     var filteredTransactions: [Transaction] {
-        let calendar = Calendar.current
-        let now = Date()
-        
-        return allTransactions.filter { tx in
-            // Must be Expense for spending analysis
-            guard tx.type == .expense else { return false }
-            
-            switch selectedPeriod {
-            case .week:
-                let weekAgo = calendar.date(byAdding: .day, value: -7, to: now)!
-                return tx.date >= weekAgo
-            case .month:
-                let monthAgo = calendar.date(byAdding: .month, value: -1, to: now)!
-                return tx.date >= monthAgo
-            case .year:
-                let yearAgo = calendar.date(byAdding: .year, value: -1, to: now)!
-                return tx.date >= yearAgo
-            }
+        let range = currentRange
+        return allTransactions.filter { $0.date >= range.start && $0.date < range.end }
+    }
+    
+    var previousTransactions: [Transaction] {
+        let range = previousRange
+        return allTransactions.filter { $0.date >= range.start && $0.date < range.end }
+    }
+    
+    // Tab Specific
+    var tabTransactions: [Transaction] {
+        switch selectedTab {
+        case .expense: return filteredTransactions.filter { $0.type == .expense }
+        case .income: return filteredTransactions.filter { $0.type == .income }
+        case .transactions: return filteredTransactions
         }
     }
     
+    // Financials
+    var totalIncome: Double { filteredTransactions.filter { $0.type == .income }.reduce(0) { $0 + $1.amount } }
+    var totalExpense: Double { filteredTransactions.filter { $0.type == .expense }.reduce(0) { $0 + $1.amount } }
+    var netBalance: Double { totalIncome - totalExpense }
+    
+    var previousTotalForTab: Double {
+        switch selectedTab {
+        case .expense: return previousTransactions.filter { $0.type == .expense }.reduce(0) { $0 + $1.amount }
+        case .income: return previousTransactions.filter { $0.type == .income }.reduce(0) { $0 + $1.amount }
+        default: return 0
+        }
+    }
+    
+    var averagePerDay: Double {
+        let calendar = Calendar.current
+        let days = calendar.dateComponents([.day], from: currentRange.start, to: currentRange.end).day ?? 1
+        if selectedTab == .transactions { return 0 }
+        let total = selectedTab == .income ? totalIncome : totalExpense
+        return total / Double(max(1, days))
+    }
+    
+    // Top Category Calculation
+    var topCategory: (name: String, amount: Double, icon: String, color: String)? {
+        let expenses = filteredTransactions.filter { $0.type == .expense }
+        let grouped = Dictionary(grouping: expenses, by: { $0.category ?? Category(name: "Uncategorized", icon: "questionmark", colorHex: "808080") })
+        
+        let sorted = grouped.map { (category, txs) in
+            (category, txs.reduce(0) { $0 + $1.amount })
+        }
+        .sorted { $0.1 > $1.1 }
+        
+        if let first = sorted.first {
+            return (first.0.name, first.1, first.0.icon, first.0.colorHex)
+        }
+        return nil
+    }
+    
+    var trend: TrendResult? {
+        // Calculate based on selected tab amount vs previous period amount
+        let current = selectedTab == .income ? totalIncome : (selectedTab == .expense ? totalExpense : 0)
+        return TrendCalculator.calculateTrend(current: current, previous: previousTotalForTab)
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
                 Theme.Colors.background.ignoresSafeArea()
                 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // 1. Time Filter
-                        Picker("Period", selection: $selectedPeriod) {
-                            ForEach(TimePeriod.allCases) { period in
-                                Text(period.rawValue).tag(period)
+                VStack(spacing: 0) {
+                    
+                    // MARK: - Premium Header
+                    VStack(spacing: 8) {
+                        // Date Navigator
+                        HStack {
+                            Button { stepDate(by: -1) } label: {
+                                Image(systemName: "chevron.left.circle.fill")
+                                    .symbolRenderingMode(.hierarchical)
+                                    .foregroundStyle(Theme.Colors.secondaryText)
+                                    .font(.title3)
+                            }
+                            
+                            Menu {
+                                Picker("Period", selection: $periodType) {
+                                    ForEach(NavigationPeriod.allCases) { p in
+                                        Text(p.rawValue).tag(p)
+                                    }
+                                }
+                            } label: {
+                                Text(currentDate.formatPeriod(periodType))
+                                    .font(.headline)
+                                    .foregroundStyle(Theme.Colors.primaryText)
+                            }
+                            
+                            Button { stepDate(by: 1) } label: {
+                                Image(systemName: "chevron.right.circle.fill")
+                                    .symbolRenderingMode(.hierarchical)
+                                    .foregroundStyle(Theme.Colors.secondaryText)
+                                    .font(.title3)
                             }
                         }
-                        .pickerStyle(.segmented)
-                        .padding(.horizontal)
+                        .padding(.top, 4)
                         
-                        if filteredTransactions.isEmpty {
-                            ContentUnavailableView(
-                                "No Data",
-                                systemImage: "chart.xyaxis.line",
-                                description: Text("No expenses found for this period.")
-                            )
-                            .padding(.top, 40)
-                        } else {
-                            // 2. Breakdown Donut
-                            VStack(alignment: .leading, spacing: 16) {
-                                Text("Where your money went")
-                                    .font(Theme.Fonts.display(18))
-                                    .foregroundStyle(Theme.Colors.primaryText)
-                                
-                                CategoryBreakdownChart(transactions: filteredTransactions)
+                        // Big Number + Trend
+                        VStack(spacing: 4) {
+                            // Logic: If chart selection active, show that. Else show period total/net.
+                            Group {
+                                if let selected = selectedChartAmount {
+                                    Text(selected.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
+                                        .foregroundStyle(Theme.Colors.primaryText)
+                                } else {
+                                    Text((selectedTab == .income ? totalIncome : (selectedTab == .expense ? totalExpense : netBalance)).formatted(.currency(code: CurrencyManager.shared.currencyCode)))
+                                        .foregroundStyle(Theme.Colors.primaryText)
+                                }
                             }
-                            .padding(20)
-                            .background(Theme.Colors.secondaryBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 24))
-                            .padding(.horizontal)
+                            .font(Theme.Fonts.display(36))
+                            .contentTransition(.numericText())
+                            .animation(.snappy, value: selectedChartAmount)
                             
-                            // 3. Spending Trends Bar
-                            VStack(alignment: .leading, spacing: 16) {
-                                Text("Spending Trend")
-                                    .font(Theme.Fonts.display(18))
-                                    .foregroundStyle(Theme.Colors.primaryText)
-                                
-                                SpendingChart(transactions: filteredTransactions, period: selectedPeriod)
+                            // Show trend only if NO selection (otherwise it's confusing)
+                            if selectedChartAmount == nil, let t = trend, selectedTab != .transactions {
+                                HStack(spacing: 4) {
+                                    Image(systemName: t.isIncrease ? "arrow.up.right" : "arrow.down.right")
+                                    Text("\(t.percentage.formatted(.number.precision(.fractionLength(1))))%")
+                                    Text("vs last \(periodType.rawValue.lowercased())")
+                                        .foregroundStyle(Theme.Colors.secondaryText)
+                                }
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(t.isIncrease ? (selectedTab == .income ? Theme.Colors.mint : Theme.Colors.coral) : (selectedTab == .income ? Theme.Colors.coral : Theme.Colors.mint))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Theme.Colors.secondaryBackground)
+                                .clipShape(Capsule())
+                            } else if let date = selectedChartDate {
+                                // Show Date of selection
+                                Text(date.formatted(date: .complete, time: .omitted))
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.Colors.secondaryText)
+                                    .padding(.top, 4)
                             }
-                            .padding(20)
-                            .background(Theme.Colors.secondaryBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 24))
-                            .padding(.horizontal)
-                            
-                            // 4. Quick Highlights
-                            HStack(spacing: 16) {
-                                HighlightCard(
-                                    title: "Daily Average",
-                                    value: calculateDailyAverage(),
-                                    icon: "calendar",
-                                    color: Theme.Colors.mint
-                                )
-                                
-                                HighlightCard(
-                                    title: "Top Category",
-                                    value: calculateTopCategory(),
-                                    icon: "trophy.fill",
-                                    color: Theme.Colors.coral
-                                )
-                            }
-                            .padding(.horizontal)
-                            .padding(.bottom, 100)
                         }
                     }
-                    .padding(.top)
+                    .padding(.bottom, 20)
+                    .background(Theme.Colors.background)
+                    
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            
+                            // MARK: - Insights Deck
+                            InsightsCarousel(
+                                income: totalIncome,
+                                expense: totalExpense,
+                                net: netBalance,
+                                avgPerDay: averagePerDay
+                            )
+                            
+                            // MARK: - Tab Selection
+                            Picker("Type", selection: $selectedTab) {
+                                ForEach(AnalysisTab.allCases, id: \.self) { tab in
+                                    Text(tab.rawValue).tag(tab)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .padding(.horizontal)
+
+                            // MARK: - Contextual Content
+                            if selectedTab == .transactions {
+                                TransactionsList(transactions: filteredTransactions)
+                            } else {
+                                // Chart for Income or Expense
+                                VStack(alignment: .leading) {
+                                    HStack {
+                                        Text("Trends")
+                                            .font(.headline)
+                                        
+                                        Spacer()
+                                        
+                                        // Chart Type Toggle (Only for Expense usually, but can look cool for Income too)
+                                        Picker("Graph", selection: $chartType) {
+                                            Image(systemName: "chart.bar.fill").tag(AnalysisChartType.bar)
+                                            Image(systemName: "chart.pie.fill").tag(AnalysisChartType.pie)
+                                        }
+                                        .pickerStyle(.segmented)
+                                        .frame(width: 100)
+                                    }
+                                    .padding(.horizontal)
+                                    
+                                    if chartType == .bar {
+                                        SpendingChart(
+                                            transactions: tabTransactions,
+                                            period: mapToAnalysisPeriod(periodType),
+                                            customDateRange: currentRange,
+                                            selectedDate: $selectedChartDate,
+                                            selectedAmount: $selectedChartAmount
+                                        )
+                                        .padding(.horizontal)
+                                        .transition(.opacity.combined(with: .move(edge: .leading)))
+                                    } else {
+                                        CategoryPieChart(transactions: tabTransactions)
+                                            .padding(.horizontal)
+                                            .transition(.opacity.combined(with: .move(edge: .trailing)))
+                                    }
+                                }
+                                
+                                if selectedTab == .expense {
+                                    // Expense Mode: Category Breakdown
+                                    VStack(alignment: .leading, spacing: 16) {
+                                        HStack {
+                                            Text("Where your money went")
+                                                .font(.headline)
+                                            Spacer()
+                                        }
+                                        .padding(.horizontal)
+                                        
+                                        CategoryBreakdownList(transactions: tabTransactions)
+                                            .padding(.horizontal)
+                                    }
+                                } else if selectedTab == .income {
+                                    // Income Mode: Recent Inflows (No category breakdown for income usually)
+                                    VStack(alignment: .leading, spacing: 16) {
+                                        HStack {
+                                            Text("Recent Income")
+                                                .font(.headline)
+                                            Spacer()
+                                        }
+                                        .padding(.horizontal)
+                                        
+                                        // Simple list of income transactions
+                                        LazyVStack(spacing: 12) {
+                                            ForEach(tabTransactions.prefix(5)) { transaction in
+                                                HStack {
+                                                    Circle()
+                                                        .fill(Theme.Colors.mint.opacity(0.1))
+                                                        .frame(width: 40, height: 40)
+                                                        .overlay {
+                                                            Image(systemName: "arrow.down")
+                                                                .foregroundStyle(Theme.Colors.mint)
+                                                                .font(.system(size: 14, weight: .bold))
+                                                        }
+                                                    
+                                                    VStack(alignment: .leading, spacing: 4) {
+                                                        Text(transaction.note.isEmpty ? "Income" : transaction.note)
+                                                            .font(.body.weight(.medium))
+                                                            .foregroundStyle(Theme.Colors.primaryText)
+                                                        
+                                                        Text(transaction.date.formatted(date: .abbreviated, time: .omitted))
+                                                            .font(.caption)
+                                                            .foregroundStyle(Theme.Colors.secondaryText)
+                                                    }
+                                                    
+                                                    Spacer()
+                                                    
+                                                    Text(transaction.amount.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
+                                                        .font(.body.weight(.semibold))
+                                                        .foregroundStyle(Theme.Colors.mint)
+                                                }
+                                                .padding(12)
+                                                .background(Theme.Colors.secondaryBackground)
+                                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                            }
+                                        }
+                                        .padding(.horizontal)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.bottom, 100)
+                    }
                 }
             }
-            .navigationTitle("Analysis")
+            .navigationTitle("")
+            .navigationBarHidden(true)
         }
     }
     
-    private func calculateDailyAverage() -> String {
-        let total = filteredTransactions.reduce(0) { $0 + $1.amount }
-        let days: Double = selectedPeriod == .week ? 7 : (selectedPeriod == .month ? 30 : 365)
-        return String(format: "$%.0f", total / days)
+    private func stepDate(by value: Int) {
+        let calendar = Calendar.current
+        switch periodType {
+        case .week:
+            currentDate = calendar.date(byAdding: .weekOfYear, value: value, to: currentDate) ?? currentDate
+        case .month:
+            currentDate = calendar.date(byAdding: .month, value: value, to: currentDate) ?? currentDate
+        case .year:
+            currentDate = calendar.date(byAdding: .year, value: value, to: currentDate) ?? currentDate
+        }
     }
     
-    private func calculateTopCategory() -> String {
-        let grouped = Dictionary(grouping: filteredTransactions) { $0.category?.name ?? "Other" }
-        
-        let categoryTotals = grouped.map { key, transactions in
-            (key: key, total: transactions.reduce(0) { $0 + $1.amount })
+    private func mapToAnalysisPeriod(_ p: NavigationPeriod) -> AnalysisPeriod {
+        switch p {
+        case .week: return .thisWeek
+        case .month: return .thisMonth
+        case .year: return .thisYear
         }
+    }
+}
+// Keep CategoryBreakdownList unchanged or lightly refined
+
+enum AnalysisChartType {
+    case bar
+    case pie
+}
+
+
+// Helper for breakdown list
+struct CategoryBreakdownList: View {
+    let transactions: [Transaction]
+    
+    var grouped: [(Category, Double)] {
+        let g = Dictionary(grouping: transactions, by: { $0.category ?? Category(name: "Uncategorized", icon: "questionmark", colorHex: "808080") })
         
-        let topCategory = categoryTotals.max { $0.total < $1.total }
-        return topCategory?.key ?? "--"
+        // Explicitly map (Key, Value) -> (Category, Double)
+        return g.map { (category, txs) in
+            (category, txs.reduce(0) { $0 + $1.amount })
+        }
+        .sorted { $0.1 > $1.1 }
+    }
+    
+    var total: Double {
+        grouped.reduce(0) { $0 + $1.1 }
+    }
+    
+    // Helper to get transactions for a specific category
+    func transactions(for category: Category) -> [Transaction] {
+        return transactions.filter { ($0.category?.id == category.id) || ($0.category == nil && category.name == "Uncategorized") }
+    }
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            ForEach(grouped, id: \.0.id) { (category, amount) in
+                NavigationLink(destination: CategoryDetailView(categoryName: category.name, transactions: transactions(for: category))) {
+                    HStack {
+                        Circle()
+                            .fill(Color(hex: category.colorHex))
+                            .frame(width: 40, height: 40)
+                            .overlay {
+                                Image(systemName: category.icon)
+                                    .foregroundStyle(.white)
+                                    .font(.system(size: 18))
+                            }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(category.name)
+                                .font(Theme.Fonts.body(16).weight(.medium))
+                                .foregroundStyle(Theme.Colors.primaryText)
+                        }
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(amount.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
+                                .font(Theme.Fonts.body(16).weight(.semibold)) // Fixed font
+                                .foregroundStyle(Theme.Colors.primaryText)
+                            
+                            Text(total > 0 ? "\((amount/total * 100).formatted(.number.precision(.fractionLength(0))))%" : "0%")
+                                .font(.caption)
+                                .foregroundStyle(Theme.Colors.secondaryText)
+                        }
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(Theme.Colors.secondaryText)
+                    }
+                    .padding(12)
+                    .background(Theme.Colors.secondaryBackground) // Light card styling per row
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        }
+    }
+}
+// MARK: - Subviews
+
+struct PeriodPill: View {
+    let period: AnalysisPeriod
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(period.rawValue)
+                .font(Theme.Fonts.body(14))
+                .fontWeight(isSelected ? .semibold : .regular)
+                .foregroundStyle(isSelected ? Theme.Colors.background : Theme.Colors.secondaryText)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? Theme.Colors.primaryText : Theme.Colors.secondaryBackground)
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
 
-struct HighlightCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundStyle(color)
-                Spacer()
-            }
-            
-            Text(value)
-                .font(Theme.Fonts.display(20))
-                .foregroundStyle(Theme.Colors.primaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            
-            Text(title)
-                .font(Theme.Fonts.body(12))
-                .foregroundStyle(Theme.Colors.secondaryText)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity)
-        .background(Theme.Colors.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-    }
-}
+// No subviews needed as they are integrated into the main view or separate files.

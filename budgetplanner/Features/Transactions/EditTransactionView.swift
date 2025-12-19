@@ -29,7 +29,7 @@ struct EditTransactionView: View {
                                     .foregroundStyle(Theme.Colors.secondaryText)
                                 
                                 HStack(spacing: 4) {
-                                    Text("$")
+                                    Text(CurrencyManager.shared.getSymbol(for: CurrencyManager.shared.currencyCode))
                                         .font(Theme.Fonts.display(40))
                                         .foregroundStyle(Theme.Colors.primaryText)
                                     
