@@ -14,6 +14,9 @@ final class Category {
     @Relationship(deleteRule: .cascade, inverse: \Transaction.category)
     var transactions: [Transaction]? = []
     
+    @Relationship(deleteRule: .cascade)
+    var budgetHistory: [BudgetHistory]? = []
+    
     init(name: String, icon: String, colorHex: String, budgetLimit: Double? = nil) {
         self.name = name
         self.icon = icon

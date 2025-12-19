@@ -8,7 +8,7 @@ struct CategorySelector: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 20) {
-                ForEach(categories) { category in
+                ForEach(categories, id: \.self) { category in
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             selectedCategory = category
