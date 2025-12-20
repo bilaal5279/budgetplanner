@@ -9,20 +9,31 @@ struct SettingsView: View {
     
     @Query private var preferences: [AppPreferences]
     
+    // Direct access for immediate UI updates
+    @AppStorage("appTheme") private var currentTheme: Theme.AppAppearance = .system
+    @AppStorage("appAccent") private var currentAccent: Theme.AppAccent = .mint
+    
     // Derived bindings to update the Model
     private var themeBinding: Binding<Theme.AppAppearance> {
         Binding(
             get: {
+                // Prefer local storage for speed, or Model? 
+                // Let's stick to the current logic: Model is source of truth for "settings page state", 
+                // but we default to AppStorage if Model missing.
                 if let first = preferences.first, let theme = Theme.AppAppearance(rawValue: first.themeRawValue) {
                     return theme
                 }
-                return .system
+                return currentTheme
             },
             set: { newValue in
+                // 1. Update Local Storage (Triggers App UI update immediately)
+                currentTheme = newValue
+                
+                // 2. Update Cloud Model
                 if let first = preferences.first {
                     first.themeRawValue = newValue.rawValue
                 } else {
-                    let newPref = AppPreferences(themeRawValue: newValue.rawValue, accentRawValue: Theme.AppAccent.mint.rawValue)
+                    let newPref = AppPreferences(themeRawValue: newValue.rawValue, accentRawValue: currentAccent.rawValue)
                     modelContext.insert(newPref)
                 }
             }
@@ -35,13 +46,17 @@ struct SettingsView: View {
                 if let first = preferences.first, let accent = Theme.AppAccent(rawValue: first.accentRawValue) {
                     return accent
                 }
-                return .mint
+                return currentAccent
             },
             set: { newValue in
+                // 1. Update Local Storage
+                currentAccent = newValue
+                
+                // 2. Update Cloud Model
                  if let first = preferences.first {
                     first.accentRawValue = newValue.rawValue
                 } else {
-                    let newPref = AppPreferences(themeRawValue: Theme.AppAppearance.system.rawValue, accentRawValue: newValue.rawValue)
+                    let newPref = AppPreferences(themeRawValue: currentTheme.rawValue, accentRawValue: newValue.rawValue)
                     modelContext.insert(newPref)
                 }
             }

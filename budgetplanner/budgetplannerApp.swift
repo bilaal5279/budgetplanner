@@ -61,12 +61,21 @@ struct budgetplannerApp: App {
     @AppStorage("appTheme") private var currentTheme: Theme.AppAppearance = .system
     @AppStorage("appAccent") private var currentAccent: Theme.AppAccent = .mint
 
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
+
     var body: some Scene {
         WindowGroup {
             ZStack {
-                MainTabView()
-                    .preferredColorScheme(colorScheme)
-                    .id(currentAccent) // Force redraw when accent changes
+                if hasCompletedOnboarding {
+                    MainTabView()
+                        .preferredColorScheme(colorScheme)
+                        .id(currentAccent) // Force redraw when accent changes
+                        .transition(.opacity)
+                } else {
+                    OnboardingContainerView(isCompleted: $hasCompletedOnboarding)
+                        .preferredColorScheme(colorScheme)
+                        .transition(.opacity)
+                }
                 
                 ThemeSyncManager()
             }
