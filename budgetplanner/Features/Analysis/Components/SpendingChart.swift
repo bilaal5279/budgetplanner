@@ -69,6 +69,10 @@ struct SpendingChart: View {
                                     }
                                 }
                             }
+                            .onEnded { _ in
+                                selectedDate = nil
+                                selectedAmount = nil
+                            }
                     )
             }
         }

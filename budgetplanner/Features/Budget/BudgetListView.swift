@@ -5,8 +5,10 @@ struct BudgetListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Category.name) private var categories: [Category]
     @Query(sort: \Transaction.date) private var allTransactions: [Transaction]
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     
     @State private var isPresentingAddCategory = false
+    @State private var showPaywall = false
     @State private var isPresentingSettings = false
     @State private var selectedDate = Date()
     @State private var categoryToEdit: Category?
@@ -161,11 +163,13 @@ struct BudgetListView: View {
                                         .buttonStyle(.plain) // remove default button flash if desired
                                         .opacity(isPastPeriod ? 1.0 : 1.0) // Maintain visibility
                                         .contextMenu {
-                                            Button(role: .destructive) {
-                                                categoryToDelete = category
-                                                showDeleteConfirmation = true
-                                            } label: {
-                                                Label("Delete Category", systemImage: "trash")
+                                            if category.isCustom {
+                                                Button(role: .destructive) {
+                                                    categoryToDelete = category
+                                                    showDeleteConfirmation = true
+                                                } label: {
+                                                    Label("Delete Category", systemImage: "trash")
+                                                }
                                             }
                                         }
                                     }
@@ -204,7 +208,15 @@ struct BudgetListView: View {
                 
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        isPresentingAddCategory = true
+                        // Count all custom categories (regardless of expense/income type for now, or total)
+                        // Query 'categories' is already available
+                        let customCount = categories.filter { $0.isCustom }.count
+                        
+                        if !subscriptionManager.isPremium && customCount >= 1 {
+                            showPaywall = true
+                        } else {
+                            isPresentingAddCategory = true
+                        }
                     } label: {
                         Image(systemName: "plus")
                             .foregroundStyle(Theme.Colors.primaryText)
@@ -213,6 +225,9 @@ struct BudgetListView: View {
             }
             .sheet(isPresented: $isPresentingAddCategory) {
                 AddCategoryView()
+            }
+            .fullScreenCover(isPresented: $showPaywall) {
+                OnboardingPaywallView(isCompleted: $showPaywall)
             }
             .sheet(isPresented: $isPresentingSettings) {
                 BudgetSettingsView()
@@ -305,6 +320,7 @@ struct BudgetListView: View {
     }
     
     private func deleteCategory(_ category: Category) {
+        guard category.isCustom else { return }
         modelContext.delete(category)
         categoryToDelete = nil
     }

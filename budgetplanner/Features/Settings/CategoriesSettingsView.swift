@@ -6,9 +6,11 @@ struct CategoriesSettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allCategories: [Category]
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     
     // Sheet State
     @State private var showingAddCategory = false
+    @State private var showPaywall = false
     @State private var newCategoryName = ""
     @State private var newCategoryIcon = "tag.fill"
     @State private var newCategoryColor = Theme.Colors.mint
@@ -37,6 +39,7 @@ struct CategoriesSettingsView: View {
                     
                     Spacer()
                 }
+                .deleteDisabled(!category.isCustom)
             }
             .onDelete(perform: deleteCategory)
         }
@@ -44,7 +47,12 @@ struct CategoriesSettingsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showingAddCategory = true
+                    let customCount = allCategories.filter { $0.isCustom }.count
+                    if !subscriptionManager.isPremium && customCount >= 1 {
+                        showPaywall = true
+                    } else {
+                        showingAddCategory = true
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -83,6 +91,9 @@ struct CategoriesSettingsView: View {
                 .presentationDetents([.medium])
             }
         }
+        .fullScreenCover(isPresented: $showPaywall) {
+            OnboardingPaywallView(isCompleted: $showPaywall)
+        }
     }
     
     private func addCategory() {
@@ -102,7 +113,7 @@ struct CategoriesSettingsView: View {
     private func deleteCategory(at offsets: IndexSet) {
         for index in offsets {
             let category = displayedCategories[index]
-            // Optional: Check if used?
+            guard category.isCustom else { continue }
             modelContext.delete(category)
         }
     }

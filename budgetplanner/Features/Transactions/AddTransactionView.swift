@@ -23,6 +23,7 @@ struct AddTransactionView: View {
     @State private var showAccountSheet = false
     @State private var note: String = ""
     @State private var showNoteInput = false
+    @State private var showRatingPrompt = false
     
     var body: some View {
         ZStack {
@@ -225,6 +226,16 @@ struct AddTransactionView: View {
             Button("Done") {}
             Button("Cancel", role: .cancel) {}
         }
+        .alert("How is your experience?", isPresented: $showRatingPrompt) {
+            Button("It's Great! 😍") {
+                RatingManager.shared.openAppStoreReview()
+            }
+            Button("Could be better", role: .cancel) {
+                // Just dismiss
+            }
+        } message: {
+            Text("We'd love to hear your feedback on the App Store!")
+        }
         .onAppear {
             if !didInitialize {
                 if let account = preSelectedAccount {
@@ -316,6 +327,11 @@ struct AddTransactionView: View {
         generator.notificationOccurred(.success)
         amountString = ""
         note = "" // Reset note
+        
+        // Check for First Transaction Rating Prompt
+        if RatingManager.shared.shouldShowFirstTransactionPrompt() {
+            showRatingPrompt = true
+        }
     }
 }
 

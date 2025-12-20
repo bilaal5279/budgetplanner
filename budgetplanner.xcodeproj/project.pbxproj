@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		EC0BE6A12EF7171A00A680EB /* ReceiptParser in Frameworks */ = {isa = PBXBuildFile; productRef = EC0BE6A02EF7171A00A680EB /* ReceiptParser */; };
+		EC0BE6A32EF7171A00A680EB /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = EC0BE6A22EF7171A00A680EB /* RevenueCat */; };
+		EC0BE6A52EF7171A00A680EB /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = EC0BE6A42EF7171A00A680EB /* RevenueCatUI */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		EC5664372EF3244900FA34EC /* budgetplanner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = budgetplanner.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +42,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EC0BE6A32EF7171A00A680EB /* RevenueCat in Frameworks */,
+				EC0BE6A12EF7171A00A680EB /* ReceiptParser in Frameworks */,
+				EC0BE6A52EF7171A00A680EB /* RevenueCatUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +87,9 @@
 			);
 			name = budgetplanner;
 			packageProductDependencies = (
+				EC0BE6A02EF7171A00A680EB /* ReceiptParser */,
+				EC0BE6A22EF7171A00A680EB /* RevenueCat */,
+				EC0BE6A42EF7171A00A680EB /* RevenueCatUI */,
 			);
 			productName = budgetplanner;
 			productReference = EC5664372EF3244900FA34EC /* budgetplanner.app */;
@@ -107,6 +119,9 @@
 			);
 			mainGroup = EC56642E2EF3244900FA34EC;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				EC0BE69F2EF7171A00A680EB /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = EC5664382EF3244900FA34EC /* Products */;
 			projectDirPath = "";
@@ -150,6 +165,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = budgetplanner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Pocket Wealth";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -163,12 +179,14 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.digitalsprout.budgetplanner;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -184,6 +202,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = budgetplanner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Pocket Wealth";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -197,12 +216,14 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.digitalsprout.budgetplanner;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -349,6 +370,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		EC0BE69F2EF7171A00A680EB /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.51.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		EC0BE6A02EF7171A00A680EB /* ReceiptParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EC0BE69F2EF7171A00A680EB /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = ReceiptParser;
+		};
+		EC0BE6A22EF7171A00A680EB /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EC0BE69F2EF7171A00A680EB /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		EC0BE6A42EF7171A00A680EB /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EC0BE69F2EF7171A00A680EB /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = EC56642F2EF3244900FA34EC /* Project object */;
 }

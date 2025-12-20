@@ -216,34 +216,60 @@ struct AccountPreviewCard: View {
     let colorHex: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Color(hex: colorHex).opacity(0.1))
-                    .frame(width: 44, height: 44)
+        ZStack(alignment: .bottomLeading) {
+            // Gradient Background
+            LinearGradient(
+                colors: [
+                    Color(hex: colorHex),
+                    Color(hex: colorHex).opacity(0.7)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            
+            // Content
+            VStack(alignment: .leading, spacing: 0) {
+                // Top Row: Icon + Decoration
+                HStack {
+                    // Glassy Icon Container
+                    ZStack {
+                        Circle()
+                            .fill(.white.opacity(0.2))
+                            .frame(width: 44, height: 44)
+                        
+                        Image(systemName: icon)
+                            .font(.system(size: 20))
+                            .foregroundStyle(.white)
+                    }
+                    
+                    Spacer()
+                    
+                    // "Contactless" decoration
+                    Image(systemName: "wave.3.right")
+                        .font(.system(size: 24, weight: .light))
+                        .foregroundStyle(.white.opacity(0.3))
+                }
                 
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .foregroundStyle(Color(hex: colorHex))
+                Spacer()
+                
+                // Balance
+                Text(balance.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
+                    .font(Theme.Fonts.display(24))
+                    .foregroundStyle(.white)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                
+                // Account Name
+                Text(name)
+                    .font(Theme.Fonts.body(14).weight(.medium))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .padding(.top, 4)
+                    .lineLimit(1)
             }
-            
-            Spacer()
-            
-            Text(name)
-                .font(Theme.Fonts.body(14))
-                .foregroundStyle(Theme.Colors.secondaryText)
-                .lineLimit(1)
-            
-            Text(balance.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
-                .font(Theme.Fonts.display(20))
-                .foregroundStyle(Theme.Colors.primaryText)
-                .minimumScaleFactor(0.8)
-                .lineLimit(1)
+            .padding(20)
         }
-        .padding(16)
-        .frame(width: 160, height: 160)
-        .background(Theme.Colors.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .shadow(color: Color.black.opacity(0.1), radius: 15, x: 0, y: 10)
+        .frame(width: 280, height: 170) // Fixed Card Size for Preview (More realistic card ratio 1.58 : 1)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: Color(hex: colorHex).opacity(0.4), radius: 20, x: 0, y: 10)
     }
 }

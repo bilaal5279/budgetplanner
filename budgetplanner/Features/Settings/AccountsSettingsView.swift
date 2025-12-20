@@ -8,6 +8,9 @@ struct AccountsSettingsView: View {
     @State private var showingAddAccount = false
     @State private var accountToEdit: Account?
     
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
+    @State private var showPaywall = false
+    
     var body: some View {
         List {
             ForEach(allAccounts) { account in
@@ -51,7 +54,11 @@ struct AccountsSettingsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showingAddAccount = true
+                    if !subscriptionManager.isPremium && allAccounts.count >= 2 {
+                        showPaywall = true
+                    } else {
+                        showingAddAccount = true
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -62,6 +69,9 @@ struct AccountsSettingsView: View {
         }
         .sheet(item: $accountToEdit) { account in
             AddAccountView(accountToEdit: account)
+        }
+        .fullScreenCover(isPresented: $showPaywall) {
+            OnboardingPaywallView(isCompleted: $showPaywall)
         }
     }
     

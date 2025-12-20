@@ -14,6 +14,9 @@ final class Category {
         set { typeRawValue = newValue.rawValue }
     }
     
+    // New property to distinguish default vs custom
+    var isCustom: Bool = true
+    
     // CloudKit requirement: Optional relationship or default value handling recommended, 
     // but for 'to-many' it is usually [Transaction]? or [Transaction] with default = []
     // To match Phase 3 plan:
@@ -23,11 +26,12 @@ final class Category {
     @Relationship(deleteRule: .cascade)
     var budgetHistory: [BudgetHistory]? = []
     
-    init(name: String, icon: String, colorHex: String, budgetLimit: Double? = nil, type: TransactionType = .expense) {
+    init(name: String, icon: String, colorHex: String, budgetLimit: Double? = nil, type: TransactionType = .expense, isCustom: Bool = true) {
         self.name = name
         self.icon = icon
         self.colorHex = colorHex
         self.budgetLimit = budgetLimit
         self.typeRawValue = type.rawValue
+        self.isCustom = isCustom
     }
 }

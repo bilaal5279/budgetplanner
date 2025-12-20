@@ -35,8 +35,8 @@ struct OnboardingContainerView: View {
                     
                 case 2:
                     QuestionView(
-                        question: "How much do you spend monthly?",
-                        options: ["Less than $1,000", "$1,000 - $3,000", "$3,000 - $5,000", "Startups made me broke"]
+                        question: "How much of your income do you save?",
+                        options: ["0% - 5%", "5% - 10%", "10% - 20%", "20% +"]
                     ) { _ in
                         withAnimation { currentStep += 1 }
                     }

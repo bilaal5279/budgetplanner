@@ -4,7 +4,10 @@ import SwiftData
 struct AccountsView: View {
     @Query(sort: \Account.sortOrder) private var accounts: [Account]
     @Environment(\.modelContext) private var modelContext
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
+    
     @State private var isPresentingAddAccount = false
+    @State private var showPaywall = false
     @State private var navigationPath = NavigationPath()
     
     var totalBalance: Double {
@@ -68,18 +71,26 @@ struct AccountsView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        isPresentingAddAccount = true
+                        // Limit Check: Free users maximize at 2 accounts
+                        if !subscriptionManager.isPremium && accounts.count >= 2 {
+                            showPaywall = true
+                        } else {
+                            isPresentingAddAccount = true
+                        }
                     } label: {
                         Image(systemName: "plus")
                     }
                 }
                 
                 ToolbarItem(placement: .topBarLeading) {
-                    EditButton() // Enables reordering/deletion logic if lists are used, but we might need custom logic for ForEach in ScrollView
+                    EditButton()
                 }
             }
             .sheet(isPresented: $isPresentingAddAccount) {
                  AddAccountView()
+            }
+            .fullScreenCover(isPresented: $showPaywall) {
+                OnboardingPaywallView(isCompleted: $showPaywall)
             }
         }
     }
@@ -89,36 +100,64 @@ struct AccountCard: View {
     let account: Account
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Color(hex: account.colorHex).opacity(0.1))
-                    .frame(width: 44, height: 44)
+        ZStack(alignment: .bottomLeading) {
+            // Gradient Background
+            LinearGradient(
+                colors: [
+                    Color(hex: account.colorHex),
+                    Color(hex: account.colorHex).opacity(0.7) // Slightly lighter/desaturated for gradient
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            
+            // Subtle Pattern overlay?
+            // Keeping it clean for now, maybe add noise if requested.
+            
+            // Content
+            VStack(alignment: .leading, spacing: 0) {
+                // Top Row: Icon + Decoration
+                HStack {
+                    // Glassy Icon Container
+                    ZStack {
+                        Circle()
+                            .fill(.white.opacity(0.2))
+                            .frame(width: 44, height: 44)
+                        
+                        Image(systemName: account.icon)
+                            .font(.system(size: 20))
+                            .foregroundStyle(.white)
+                    }
+                    
+                    Spacer()
+                    
+                    // "Contactless" decorative icon
+                    Image(systemName: "wave.3.right")
+                        .font(.system(size: 24, weight: .light))
+                        .foregroundStyle(.white.opacity(0.3))
+                }
                 
-                Image(systemName: account.icon)
-                    .font(.system(size: 20))
-                    .foregroundStyle(Color(hex: account.colorHex))
+                Spacer()
+                
+                // Balance (Big)
+                Text(account.balance.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
+                    .font(Theme.Fonts.display(24)) // Increased size
+                    .foregroundStyle(.white)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                
+                // Account Name (Label)
+                Text(account.name)
+                    .font(Theme.Fonts.body(14).weight(.medium))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .padding(.top, 4)
+                    .lineLimit(1)
             }
-            
-            Spacer()
-            
-            Text(account.name)
-                .font(Theme.Fonts.body(14))
-                .foregroundStyle(Theme.Colors.secondaryText)
-                .lineLimit(1)
-            
-            Text(account.balance.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
-                .font(Theme.Fonts.display(20))
-                .foregroundStyle(Theme.Colors.primaryText)
-                .minimumScaleFactor(0.8)
-                .lineLimit(1)
+            .padding(20)
         }
-        .padding(16)
-        .frame(height: 160)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.Colors.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+        .frame(height: 170) // Slightly taller for better proportion
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: Color(hex: account.colorHex).opacity(0.3), radius: 15, x: 0, y: 8)
     }
 }
 

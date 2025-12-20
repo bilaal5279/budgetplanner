@@ -14,6 +14,9 @@ struct AnalysisView: View {
     @State private var selectedChartDate: Date?
     @State private var selectedChartAmount: Double?
     
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
+    @State private var showPaywall = false
+    
     // MARK: - Computed Data
     
     // Current Period Range
@@ -243,7 +246,8 @@ struct AnalysisView: View {
                                         }
                                         .padding(.horizontal)
                                         
-                                        CategoryBreakdownList(transactions: tabTransactions)
+                                        // Simplified usage (logic inside CategoryBreakdownList)
+                                        CategoryBreakdownList(transactions: tabTransactions, showPaywall: $showPaywall)
                                             .padding(.horizontal)
                                     }
                                 } else if selectedTab == .income {
@@ -301,6 +305,9 @@ struct AnalysisView: View {
             }
             .navigationTitle("")
             .navigationBarHidden(true)
+            .fullScreenCover(isPresented: $showPaywall) {
+                OnboardingPaywallView(isCompleted: $showPaywall)
+            }
         }
     }
     
@@ -332,14 +339,15 @@ enum AnalysisChartType {
 }
 
 
+
 // Helper for breakdown list
 struct CategoryBreakdownList: View {
     let transactions: [Transaction]
+    @ObservedObject var subscriptionManager = SubscriptionManager.shared
+    @Binding var showPaywall: Bool
     
     var grouped: [(Category, Double)] {
         let g = Dictionary(grouping: transactions, by: { $0.category ?? Category(name: "Uncategorized", icon: "questionmark", colorHex: "808080") })
-        
-        // Explicitly map (Key, Value) -> (Category, Double)
         return g.map { (category, txs) in
             (category, txs.reduce(0) { $0 + $1.amount })
         }
@@ -357,48 +365,111 @@ struct CategoryBreakdownList: View {
     
     var body: some View {
         VStack(spacing: 12) {
-            ForEach(grouped, id: \.0.id) { (category, amount) in
+            // Determine how many to fully show
+            // Premium: All
+            // Free: Top 2
+            let visibleCount = subscriptionManager.isPremium ? grouped.count : 2
+            
+            // 1. Visible, Unlocked Categories
+            ForEach(grouped.prefix(visibleCount), id: \.0.id) { (category, amount) in
                 NavigationLink(destination: CategoryDetailView(categoryName: category.name, transactions: transactions(for: category))) {
-                    HStack {
-                        Circle()
-                            .fill(Color(hex: category.colorHex))
-                            .frame(width: 40, height: 40)
-                            .overlay {
-                                Image(systemName: category.icon)
-                                    .foregroundStyle(.white)
-                                    .font(.system(size: 18))
-                            }
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(category.name)
-                                .font(Theme.Fonts.body(16).weight(.medium))
-                                .foregroundStyle(Theme.Colors.primaryText)
+                    CategoryBreakdownRow(category: category, amount: amount, total: total)
+                }
+            }
+            
+            // 2. Blurred, Locked Categories (Premium Teaser)
+            if !subscriptionManager.isPremium && grouped.count > 2 {
+                ZStack {
+                    // showing a few more items, but blurred
+                    VStack(spacing: 12) {
+                        ForEach(grouped.dropFirst(2).prefix(3), id: \.0.id) { (category, amount) in
+                            CategoryBreakdownRow(category: category, amount: amount, total: total)
+                                .blur(radius: 6)
+                                .accessibilityHidden(true)
                         }
-                        
-                        Spacer()
-                        
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text(amount.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
-                                .font(Theme.Fonts.body(16).weight(.semibold)) // Fixed font
+                    }
+                    
+                    // Unlock Button Overlay
+                    Button {
+                        showPaywall = true
+                    } label: {
+                        VStack(spacing: 8) {
+                            Image(systemName: "lock.fill")
+                                .font(.title2)
+                                .foregroundStyle(Theme.Colors.mint)
+                                .padding(12)
+                                .background(Theme.Colors.mint.opacity(0.1))
+                                .clipShape(Circle())
+                            
+                            Text("Unlock Breakdown")
+                                .font(Theme.Fonts.body(16).weight(.bold))
                                 .foregroundStyle(Theme.Colors.primaryText)
                             
-                            Text(total > 0 ? "\((amount/total * 100).formatted(.number.precision(.fractionLength(0))))%" : "0%")
-                                .font(.caption)
+                            Text("See exactly where you spend")
+                                .font(Theme.Fonts.body(12))
                                 .foregroundStyle(Theme.Colors.secondaryText)
                         }
-                        
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(Theme.Colors.secondaryText)
+                        .padding(24)
+                        .background(.ultraThinMaterial)
+                        .background(Theme.Colors.secondaryBackground.opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .shadow(color: Color.black.opacity(0.1), radius: 20, x: 0, y: 10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Theme.Colors.mint.opacity(0.2), lineWidth: 1)
+                        )
                     }
-                    .padding(12)
-                    .background(Theme.Colors.secondaryBackground) // Light card styling per row
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             }
         }
     }
 }
+
+// Extracted Row for Reuse
+struct CategoryBreakdownRow: View {
+    let category: Category
+    let amount: Double
+    let total: Double
+    
+    var body: some View {
+        HStack {
+            Circle()
+                .fill(Color(hex: category.colorHex))
+                .frame(width: 40, height: 40)
+                .overlay {
+                    Image(systemName: category.icon)
+                        .foregroundStyle(.white)
+                        .font(.system(size: 18))
+                }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(category.name)
+                    .font(Theme.Fonts.body(16).weight(.medium))
+                    .foregroundStyle(Theme.Colors.primaryText)
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(amount.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
+                    .font(Theme.Fonts.body(16).weight(.semibold))
+                    .foregroundStyle(Theme.Colors.primaryText)
+                
+                Text(total > 0 ? "\((amount/total * 100).formatted(.number.precision(.fractionLength(0))))%" : "0%")
+                    .font(.caption)
+                    .foregroundStyle(Theme.Colors.secondaryText)
+            }
+            
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(Theme.Colors.secondaryText)
+        }
+        .padding(12)
+        .background(Theme.Colors.secondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
 // MARK: - Subviews
 
 struct PeriodPill: View {

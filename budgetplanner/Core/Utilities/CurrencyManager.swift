@@ -16,7 +16,9 @@ class CurrencyManager {
     }
     
     func format(_ amount: Double) -> String {
-        return amount.formatted(.currency(code: currencyCode))
+        let formatted = amount.formatted(.currency(code: currencyCode).presentation(.narrow))
+        // Force replace US$ with $ if needed
+        return formatted.replacingOccurrences(of: "US$", with: "$")
     }
     
     // List of common currencies for selection

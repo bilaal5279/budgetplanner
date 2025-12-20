@@ -10,6 +10,9 @@ struct AccountSelectionSheet: View {
     
     @State private var showingAddAccount = false
     
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
+    @State private var showPaywall = false
+    
     var body: some View {
         NavigationStack {
             List {
@@ -30,8 +33,8 @@ struct AccountSelectionSheet: View {
                             }
                             
                             Text(account.name)
-                                .font(Theme.Fonts.body(16))
-                                .foregroundStyle(Theme.Colors.primaryText)
+                            .font(Theme.Fonts.body(16))
+                            .foregroundStyle(Theme.Colors.primaryText)
                             
                             Spacer()
                             
@@ -58,18 +61,21 @@ struct AccountSelectionSheet: View {
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        showingAddAccount = true
+                        if !subscriptionManager.isPremium && accounts.count >= 2 {
+                            showPaywall = true
+                        } else {
+                            showingAddAccount = true
+                        }
                     } label: {
                         Image(systemName: "plus")
                     }
                 }
             }
             .sheet(isPresented: $showingAddAccount) {
-               // Assuming AddAccountView exists or we use a basic one. 
-               // Based on previous files, AddAccountView likely exists or needs to be referred.
-               // Verify context: AccountsView has AddAccountView inside a sheet.
-               // We will use AddAccountView() here.
                AddAccountView()
+            }
+            .fullScreenCover(isPresented: $showPaywall) {
+                OnboardingPaywallView(isCompleted: $showPaywall)
             }
         }
         .presentationDetents([.medium, .large])

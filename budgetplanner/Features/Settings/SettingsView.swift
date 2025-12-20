@@ -62,13 +62,65 @@ struct SettingsView: View {
             }
         )
     }
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
+    @AppStorage("useFaceID") private var useFaceID: Bool = false
+    
     @State private var showExportSheet = false
     @State private var showResetConfirmation = false
+    @State private var showPaywall = false
+    @State private var isLoading = false
+    @State private var restoreResult: String?
     
     
     var body: some View {
         NavigationStack {
             List {
+                // MARK: - Premium Status
+                Section {
+                    if subscriptionManager.isPremium {
+                        HStack {
+                            Image(systemName: "checkmark.seal.fill")
+                                .foregroundStyle(Theme.Colors.mint)
+                                .font(.title2)
+                            VStack(alignment: .leading) {
+                                Text("Pro Member")
+                                    .font(.headline)
+                                    .foregroundStyle(Theme.Colors.primaryText)
+                                Text("All features unlocked")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.Colors.secondaryText)
+                            }
+                        }
+                    } else {
+                        Button {
+                            showPaywall = true
+                        } label: {
+                            HStack {
+                                ZStack {
+                                    Circle()
+                                        .fill(Theme.Colors.mint.opacity(0.1))
+                                        .frame(width: 40, height: 40)
+                                    Image(systemName: "crown.fill")
+                                        .foregroundStyle(Theme.Colors.mint)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Upgrade to Pro")
+                                        .font(.headline)
+                                        .foregroundStyle(Theme.Colors.primaryText)
+                                    Text("Unlimited accounts, categories & more")
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.Colors.secondaryText)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.Colors.secondaryText)
+                            }
+                        }
+                    }
+                }
+                
                 // MARK: - General
                 Section("General") {
                     // Currency
@@ -93,6 +145,26 @@ struct SettingsView: View {
                         Spacer()
                         Text(Locale.current.language.languageCode?.identifier.uppercased() ?? "EN")
                             .foregroundStyle(Theme.Colors.secondaryText)
+                    }
+                    
+                    // Face ID (Premium)
+                    // Face ID (Premium)
+                    NavigationLink(destination: AppLockSettingsView(subscriptionManager: subscriptionManager, showPaywall: $showPaywall)) {
+                        HStack {
+                            Image(systemName: "faceid")
+                                .foregroundStyle(Theme.Colors.mint)
+                                .frame(width: 24)
+                            Text("App Lock")
+                            Spacer()
+                            if !subscriptionManager.isPremium {
+                                Image(systemName: "lock.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.Colors.secondaryText)
+                            } else {
+                                Text(useFaceID ? "On" : "Off")
+                                    .foregroundStyle(Theme.Colors.secondaryText)
+                            }
+                        }
                     }
                 }
                 
@@ -174,7 +246,11 @@ struct SettingsView: View {
                 // MARK: - Data
                 Section("Data") {
                     Button {
-                        showExportSheet = true
+                        if subscriptionManager.isPremium {
+                            showExportSheet = true
+                        } else {
+                            showPaywall = true
+                        }
                     } label: {
                          HStack {
                             Image(systemName: "square.and.arrow.up")
@@ -182,6 +258,13 @@ struct SettingsView: View {
                                 .frame(width: 24)
                             Text("Export to CSV")
                                 .foregroundStyle(Theme.Colors.primaryText)
+                            
+                            if !subscriptionManager.isPremium {
+                                Spacer()
+                                Image(systemName: "lock.fill")
+                                    .foregroundStyle(Theme.Colors.secondaryText)
+                                    .font(.caption)
+                            }
                         }
                     }
                     
@@ -194,6 +277,13 @@ struct SettingsView: View {
                                 .frame(width: 24)
                             Text("Delete All Data")
                         }
+                    }
+                    
+                    if !subscriptionManager.isPremium {
+                        Button("Restore Purchases") {
+                            restorePurchases()
+                        }
+                        .disabled(isLoading)
                     }
                 }
                 
@@ -234,12 +324,12 @@ struct SettingsView: View {
                          
                 // MARK: - Legal
                 Section("Legal") {
-                    Link(destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!) {
+                    Link(destination: URL(string: "https://digitalsprout.org/pocketwealth/terms-of-service")!) {
                          Text("Terms of Service")
                             .foregroundStyle(Theme.Colors.secondaryText)
                     }
                     
-                    Link(destination: URL(string: "https://pocketwealth.app/privacy")!) {
+                    Link(destination: URL(string: "https://digitalsprout.org/pocketwealth/privacy-policy")!) {
                          Text("Privacy Policy")
                             .foregroundStyle(Theme.Colors.secondaryText)
                     }
@@ -287,6 +377,25 @@ struct SettingsView: View {
             .sheet(isPresented: $showExportSheet) {
                 ExportOptionsView(allTransactions: allTransactions)
             }
+            .fullScreenCover(isPresented: $showPaywall) {
+                OnboardingPaywallView(isCompleted: $showPaywall)
+            }
+            .alert(isPresented: Binding<Bool>(
+                get: { restoreResult != nil },
+                set: { if !$0 { restoreResult = nil } }
+            )) {
+                Alert(title: Text("Restore Purchase"), message: Text(restoreResult ?? ""), dismissButton: .default(Text("OK")))
+            }
+            // If subscription changes to true, we might want to auto-dismiss paywall? 
+            // The paywall view handles its own dismissal via `isCompleted` binding.
+        }
+    }
+    
+    private func restorePurchases() {
+        isLoading = true
+        subscriptionManager.restorePurchases { success in
+            isLoading = false
+            restoreResult = success ? "Purchases restored successfully!" : "No purchases found to restore."
         }
     }
     
@@ -337,13 +446,34 @@ struct SettingsView: View {
             modelContext.insert(transaction)
         }
     }
+    #endif
     
     private func resetData() {
-        try? modelContext.delete(model: Transaction.self)
-        // Reset balances? For now, let's just keep accounts but maybe reset their balance to 0
-        for account in accounts {
-            account.balance = 0
+        do {
+            // 1. Delete all content
+            try modelContext.delete(model: Transaction.self)
+            try modelContext.delete(model: Account.self)
+            try modelContext.delete(model: Category.self)
+            
+            // 2. Restore Default Categories
+            // 2. Restore Default Categories
+            let defaultCategories = [
+                Category(name: "Food", icon: "fork.knife", colorHex: "FF6B6B", isCustom: false),
+                Category(name: "Transport", icon: "car.fill", colorHex: "54A0FF", isCustom: false),
+                Category(name: "Shopping", icon: "cart.fill", colorHex: "F368E0", isCustom: false),
+                Category(name: "Entertainment", icon: "tv.fill", colorHex: "A3CB38", isCustom: false)
+            ]
+            defaultCategories.forEach { modelContext.insert($0) }
+            
+            // 3. Restore Default Accounts
+            let defaultAccounts = [
+                Account(name: "Bank Card", balance: 0.0, icon: "creditcard.fill", colorHex: "54A0FF", sortOrder: 0),
+                Account(name: "Cash", balance: 0.0, icon: "banknote.fill", colorHex: "2ECC71", sortOrder: 1)
+            ]
+            defaultAccounts.forEach { modelContext.insert($0) }
+            
+        } catch {
+            print("Failed to reset data: \(error)")
         }
     }
-    #endif
 }

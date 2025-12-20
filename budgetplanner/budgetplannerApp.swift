@@ -10,6 +10,12 @@ import SwiftData
 
 @main
 struct budgetplannerApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
+    init() {
+        SubscriptionManager.shared.configure()
+    }
+    
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Transaction.self,
@@ -32,10 +38,10 @@ struct budgetplannerApp: App {
             
             if existingCategories?.isEmpty ?? true {
                 let defaultCategories = [
-                    Category(name: "Food", icon: "fork.knife", colorHex: "FF6B6B"),
-                    Category(name: "Transport", icon: "car.fill", colorHex: "54A0FF"),
-                    Category(name: "Shopping", icon: "cart.fill", colorHex: "F368E0"),
-                    Category(name: "Entertainment", icon: "tv.fill", colorHex: "A3CB38")
+                    Category(name: "Food", icon: "fork.knife", colorHex: "FF6B6B", isCustom: false),
+                    Category(name: "Transport", icon: "car.fill", colorHex: "54A0FF", isCustom: false),
+                    Category(name: "Shopping", icon: "cart.fill", colorHex: "F368E0", isCustom: false),
+                    Category(name: "Entertainment", icon: "tv.fill", colorHex: "A3CB38", isCustom: false)
                 ]
                 defaultCategories.forEach { context.insert($0) }
             }
@@ -62,6 +68,9 @@ struct budgetplannerApp: App {
     @AppStorage("appAccent") private var currentAccent: Theme.AppAccent = .mint
 
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
+    
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var biometricManager = BiometricManager.shared
 
     var body: some Scene {
         WindowGroup {
@@ -78,6 +87,20 @@ struct budgetplannerApp: App {
                 }
                 
                 ThemeSyncManager()
+                
+                // Content Lock Overlay
+                if biometricManager.isLocked {
+                    LockedView()
+                        .transition(.opacity)
+                        .zIndex(999)
+                }
+            }
+            .onChange(of: scenePhase) { oldPhase, newPhase in
+                if newPhase == .background {
+                    biometricManager.applicationDidEnterBackground()
+                } else if newPhase == .active {
+                    biometricManager.checkLockRequirement()
+                }
             }
         }
         .modelContainer(sharedModelContainer)
@@ -89,5 +112,12 @@ struct budgetplannerApp: App {
         case .light: return .light
         case .dark: return .dark
         }
+    }
+}
+
+// MARK: - App Delegate (Force Portrait)
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        return .portrait
     }
 }

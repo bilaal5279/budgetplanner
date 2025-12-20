@@ -4,16 +4,33 @@ import Charts
 struct CategoryPieChart: View {
     let transactions: [Transaction]
     @State private var selectedAngle: Double?
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     
     // Group transactions by category
     private var chartData: [(category: Category, amount: Double)] {
         let expenses = transactions.filter { $0.type == .expense }
         let grouped = Dictionary(grouping: expenses, by: { $0.category ?? Category(name: "Uncategorized", icon: "questionmark", colorHex: "808080") })
         
-        return grouped.map { (cat, txs) in
+        let sorted = grouped.map { (cat, txs) in
             (cat, txs.reduce(0) { $0 + $1.amount })
         }
         .sorted { $0.1 > $1.1 }
+        
+        if subscriptionManager.isPremium {
+            return sorted
+        } else {
+            // Free Logic: Top 2 + Rest as "Others (Upgrade)"
+            if sorted.count <= 2 { return sorted }
+            
+            let topTwo = Array(sorted.prefix(2))
+            let othersAmount = sorted.dropFirst(2).reduce(0) { $0 + $1.1 }
+            
+            if othersAmount > 0 {
+                let othersCategory = Category(name: "Others (Locked)", icon: "lock.fill", colorHex: "E0E0E0", isCustom: false)
+                return topTwo + [(othersCategory, othersAmount)]
+            }
+            return topTwo
+        }
     }
     
     private var totalAmount: Double {
