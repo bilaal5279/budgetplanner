@@ -70,7 +70,7 @@ struct CategoryPieChart: View {
                         Text("Total")
                             .font(.caption)
                             .foregroundStyle(Theme.Colors.secondaryText)
-                        Text(totalAmount.formatted(.currency(code: "USD")))
+                        Text(totalAmount.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                             .font(.headline)
                             .foregroundStyle(Theme.Colors.primaryText)
                     }

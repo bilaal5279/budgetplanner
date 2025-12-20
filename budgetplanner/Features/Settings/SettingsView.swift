@@ -7,10 +7,47 @@ struct SettingsView: View {
     @Query private var accounts: [Account]
     @Query private var allTransactions: [Transaction]
     
-    @State private var csvURL: URL?
+    @Query private var preferences: [AppPreferences]
     
-    @AppStorage("appTheme") private var currentTheme: Theme.AppAppearance = .system
-    @AppStorage("appAccent") private var currentAccent: Theme.AppAccent = .mint
+    // Derived bindings to update the Model
+    private var themeBinding: Binding<Theme.AppAppearance> {
+        Binding(
+            get: {
+                if let first = preferences.first, let theme = Theme.AppAppearance(rawValue: first.themeRawValue) {
+                    return theme
+                }
+                return .system
+            },
+            set: { newValue in
+                if let first = preferences.first {
+                    first.themeRawValue = newValue.rawValue
+                } else {
+                    let newPref = AppPreferences(themeRawValue: newValue.rawValue, accentRawValue: Theme.AppAccent.mint.rawValue)
+                    modelContext.insert(newPref)
+                }
+            }
+        )
+    }
+    
+    private var accentBinding: Binding<Theme.AppAccent> {
+        Binding(
+            get: {
+                if let first = preferences.first, let accent = Theme.AppAccent(rawValue: first.accentRawValue) {
+                    return accent
+                }
+                return .mint
+            },
+            set: { newValue in
+                 if let first = preferences.first {
+                    first.accentRawValue = newValue.rawValue
+                } else {
+                    let newPref = AppPreferences(themeRawValue: Theme.AppAppearance.system.rawValue, accentRawValue: newValue.rawValue)
+                    modelContext.insert(newPref)
+                }
+            }
+        )
+    }
+    @State private var showExportSheet = false
     @State private var showResetConfirmation = false
     
     
@@ -49,25 +86,25 @@ struct SettingsView: View {
                     NavigationLink(destination: CategoriesSettingsView(type: .expense)) {
                         HStack {
                             Image(systemName: "chart.pie.fill")
-                                .foregroundStyle(Theme.Colors.coral)
+                                .foregroundStyle(Theme.Colors.mint)
                                 .frame(width: 24)
                             Text("Expense Categories")
                         }
                     }
                     
-                    NavigationLink(destination: CategoriesSettingsView(type: .income)) {
+                    NavigationLink(destination: AccountsSettingsView()) {
                         HStack {
-                            Image(systemName: "tray.and.arrow.down.fill")
+                            Image(systemName: "building.columns.fill")
                                 .foregroundStyle(Theme.Colors.mint)
                                 .frame(width: 24)
-                            Text("Income Categories")
+                            Text("Accounts")
                         }
                     }
                 }
                 
                 // MARK: - Appearance
                 Section("Appearance") {
-                    Picker(selection: $currentTheme) {
+                    Picker(selection: themeBinding) {
                         ForEach(Theme.AppAppearance.allCases) { theme in
                             Text(theme.rawValue).tag(theme)
                         }
@@ -80,7 +117,7 @@ struct SettingsView: View {
                         }
                     }
                     
-                    Picker(selection: $currentAccent) {
+                    Picker(selection: accentBinding) {
                         ForEach(Theme.AppAccent.allCases) { accent in
                             HStack {
                                 Circle()
@@ -119,16 +156,17 @@ struct SettingsView: View {
                 }
                 
                 // MARK: - Data
+                // MARK: - Data
                 Section("Data") {
-                    if let url = CSVManager.generateCSV(from: allTransactions) {
-                        ShareLink(item: url) {
-                            HStack {
-                                Image(systemName: "square.and.arrow.up")
-                                    .foregroundStyle(Theme.Colors.mint)
-                                    .frame(width: 24)
-                                Text("Export to CSV")
-                                    .foregroundStyle(Theme.Colors.primaryText)
-                            }
+                    Button {
+                        showExportSheet = true
+                    } label: {
+                         HStack {
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundStyle(Theme.Colors.mint)
+                                .frame(width: 24)
+                            Text("Export to CSV")
+                                .foregroundStyle(Theme.Colors.primaryText)
                         }
                     }
                     
@@ -192,6 +230,19 @@ struct SettingsView: View {
                     }
                 }
                 
+                #if DEBUG
+                Section("Developer") {
+                    Button("Reset Onboarding") {
+                        UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+                        // Optional: Quit app or show alert
+                    }
+                    
+                    Button("Add Mock Data") {
+                        seedRandomData()
+                    }
+                }
+                #endif
+                
                 // Version
                 Section {
                     HStack {
@@ -217,6 +268,9 @@ struct SettingsView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("This action cannot be undone. All your transactions and categories will be permanently deleted.")
+            }
+            .sheet(isPresented: $showExportSheet) {
+                ExportOptionsView(allTransactions: allTransactions)
             }
         }
     }

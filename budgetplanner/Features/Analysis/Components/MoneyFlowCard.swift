@@ -32,7 +32,7 @@ struct MoneyFlowCard: View {
                     
                     Spacer()
                     
-                    Text(income.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD")))
+                    Text(income.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                         .font(Theme.Fonts.body(16).weight(.semibold))
                         .foregroundStyle(Theme.Colors.primaryText)
                 }
@@ -58,7 +58,7 @@ struct MoneyFlowCard: View {
                     
                     Spacer()
                     
-                    Text(expense.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD")))
+                    Text(expense.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                         .font(Theme.Fonts.body(16).weight(.semibold))
                         .foregroundStyle(Theme.Colors.primaryText)
                 }

@@ -179,7 +179,8 @@ struct AnalysisView: View {
                                 income: totalIncome,
                                 expense: totalExpense,
                                 net: netBalance,
-                                avgPerDay: averagePerDay
+                                avgPerDay: averagePerDay,
+                                dailySubtitle: selectedTab == .income ? "Income" : "Spending"
                             )
                             
                             // MARK: - Tab Selection
@@ -204,16 +205,18 @@ struct AnalysisView: View {
                                         Spacer()
                                         
                                         // Chart Type Toggle (Only for Expense usually, but can look cool for Income too)
-                                        Picker("Graph", selection: $chartType) {
-                                            Image(systemName: "chart.bar.fill").tag(AnalysisChartType.bar)
-                                            Image(systemName: "chart.pie.fill").tag(AnalysisChartType.pie)
+                                        if selectedTab != .income {
+                                            Picker("Graph", selection: $chartType) {
+                                                Image(systemName: "chart.bar.fill").tag(AnalysisChartType.bar)
+                                                Image(systemName: "chart.pie.fill").tag(AnalysisChartType.pie)
+                                            }
+                                            .pickerStyle(.segmented)
+                                            .frame(width: 100)
                                         }
-                                        .pickerStyle(.segmented)
-                                        .frame(width: 100)
                                     }
                                     .padding(.horizontal)
                                     
-                                    if chartType == .bar {
+                                    if chartType == .bar || selectedTab == .income {
                                         SpendingChart(
                                             transactions: tabTransactions,
                                             period: mapToAnalysisPeriod(periodType),

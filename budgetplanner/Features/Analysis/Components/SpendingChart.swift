@@ -69,13 +69,6 @@ struct SpendingChart: View {
                                     }
                                 }
                             }
-                            .onEnded { _ in
-                                // Optional: Reset on lift? Or keep selection?
-                                // "Hero" feel usually resets or stays.
-                                // Let's reset for now to show Total again easily.
-                                selectedDate = nil
-                                selectedAmount = nil
-                            }
                     )
             }
         }

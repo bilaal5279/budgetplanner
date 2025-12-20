@@ -6,67 +6,74 @@ struct InsightsCarousel: View {
     let net: Double
     // let topCategory: (name: String, amount: Double, icon: String, color: String)? // Removed
     let avgPerDay: Double
+    let dailySubtitle: String
     
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                // Card 1: Net Balance Health
-                InsightCard(
-                    title: "Cash Flow",
-                    icon: "arrow.triangle.2.circlepath",
-                    color: Theme.Colors.mint
-                ) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Net Balance")
-                            .font(.caption)
-                            .foregroundStyle(Theme.Colors.secondaryText)
-                        
-                        Text(net.formatted(.currency(code: "USD")))
-                            .font(.title3.bold())
-                            .foregroundStyle(net >= 0 ? Theme.Colors.primaryText : Theme.Colors.coral)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8) // Adjusted for consistency
-                        
-                        // Mini Bar Visualization
-                        HStack(spacing: 4) {
-                            // Simple bar concept
-                            Capsule()
-                                .fill(Theme.Colors.mint)
-                                .frame(width: 40, height: 4)
-                            Capsule()
-                                .fill(Theme.Colors.coral)
-                                .frame(width: 30, height: 4)
-                        }
-                        .padding(.top, 4)
+        // Grid Layout instead of ScrollView
+        HStack(spacing: 12) {
+            // Card 1: Net Balance Health
+            InsightCard(
+                title: "Net Balance",
+                icon: "arrow.triangle.2.circlepath",
+                color: Theme.Colors.mint
+            ) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Profit/Loss")
+                        .font(.caption)
+                        .foregroundStyle(Theme.Colors.secondaryText)
+                    
+                    Text(net.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
+                        .font(.title3.bold())
+                        .foregroundStyle(net >= 0 ? Theme.Colors.primaryText : Theme.Colors.coral)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    
+                    // Mini Bar Visualization
+                    HStack(spacing: 4) {
+                        Capsule()
+                            .fill(Theme.Colors.mint)
+                            .frame(maxWidth: .infinity, maxHeight: 4) // Flex width
+                        Capsule()
+                            .fill(Theme.Colors.coral)
+                            .frame(maxWidth: percentageOfExpense, maxHeight: 4) // Dynamic width based on ratio
                     }
-                }
-                
-                // Card 2: Spending Pace
-                InsightCard(
-                    title: "Pace",
-                    icon: "speedometer",
-                    color: Theme.Colors.coral
-                ) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Avg / Day")
-                            .font(.caption)
-                            .foregroundStyle(Theme.Colors.secondaryText)
-                        
-                        Text(avgPerDay.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
-                            .font(.title3.bold())
-                            .foregroundStyle(Theme.Colors.primaryText)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8) // Match the other card
-                        
-                        Text("For this period")
-                            .font(.caption2)
-                            .foregroundStyle(Theme.Colors.secondaryText)
-                    }
+                    .padding(.top, 4)
                 }
             }
-            .padding(.horizontal)
+            
+            // Card 2: Spending/Income Daily Average
+            InsightCard(
+                title: "Daily Average",
+                icon: "speedometer",
+                color: Theme.Colors.coral
+            ) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(dailySubtitle)
+                        .font(.caption)
+                        .foregroundStyle(Theme.Colors.secondaryText)
+                    
+                    Text(avgPerDay.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
+                        .font(.title3.bold())
+                        .foregroundStyle(Theme.Colors.primaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    
+                    Text("For this period")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.Colors.secondaryText)
+                }
+            }
         }
+        .padding(.horizontal)
     }
+    
+    // Helper for visual bar
+    var percentageOfExpense: CGFloat {
+        guard income > 0 else { return 50 } // Default
+        let ratio = expense / income
+        return CGFloat(min(max(ratio * 50, 10), 100))
+    }
+
 }
 
 struct InsightCard<Content: View>: View {
@@ -87,17 +94,17 @@ struct InsightCard<Content: View>: View {
                             .foregroundStyle(color)
                     }
                 
-                Spacer()
+                Text(title)
+                    .font(Theme.Fonts.body(14).weight(.medium))
+                    .foregroundStyle(Theme.Colors.primaryText)
                 
-//                Image(systemName: "chevron.right")
-//                    .font(.caption2)
-//                    .foregroundStyle(Theme.Colors.secondaryText)
+                Spacer()
             }
             
             content
         }
         .padding(14)
-        .frame(width: 160, height: 120, alignment: .topLeading) // Increased width
+        .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading) // Flex width
         .background(Theme.Colors.secondaryBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 16)

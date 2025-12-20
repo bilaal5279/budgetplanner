@@ -15,7 +15,8 @@ struct budgetplannerApp: App {
             Transaction.self,
             Category.self,
             Budget.self,
-            Account.self
+            Account.self,
+            AppPreferences.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -62,9 +63,13 @@ struct budgetplannerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainTabView()
-                .preferredColorScheme(colorScheme)
-                .id(currentAccent) // Force redraw when accent changes
+            ZStack {
+                MainTabView()
+                    .preferredColorScheme(colorScheme)
+                    .id(currentAccent) // Force redraw when accent changes
+                
+                ThemeSyncManager()
+            }
         }
         .modelContainer(sharedModelContainer)
     }

@@ -47,7 +47,7 @@ struct TransactionDetailView: View {
                         }
                         
                         // Amount
-                        Text(String(format: "$%.2f", transaction.amount))
+                        Text(transaction.amount.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                             .font(Theme.Fonts.display(48))
                             .foregroundStyle(Theme.Colors.primaryText)
                         
@@ -88,7 +88,7 @@ struct TransactionDetailView: View {
                         // Edit Buttons
                         VStack(spacing: 12) {
                             Button {
-                                newAmountString = String(format: "%.2f", transaction.amount * 100)
+                                newAmountString = String(format: "%.2f", transaction.amount)
                                 showEditAmountSheet = true
                             } label: {
                                 ActionRow(icon: "pencil", title: "Edit Amount", color: Theme.Colors.primaryText)
@@ -123,7 +123,7 @@ struct TransactionDetailView: View {
             Button("Cancel", role: .cancel) { }
             Button("Save") {
                 if let amountVal = Double(newAmountString) {
-                    saveNewAmount(amountVal / 100)
+                    saveNewAmount(amountVal)
                 }
             }
         } message: {

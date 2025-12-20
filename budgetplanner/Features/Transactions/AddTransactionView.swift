@@ -21,6 +21,8 @@ struct AddTransactionView: View {
     // Sheet States
     @State private var showCategorySheet = false
     @State private var showAccountSheet = false
+    @State private var note: String = ""
+    @State private var showNoteInput = false
     
     var body: some View {
         ZStack {
@@ -84,16 +86,34 @@ struct AddTransactionView: View {
                     
                     if selectedType == .transfer {
                         // Transfer Layout
-                        HStack(spacing: 12) {
-                            // Source Account
-                            AccountPickerCard(title: "From", selection: $selectedAccount, accounts: accounts)
+                        VStack(spacing: 12) {
+                            HStack(spacing: 12) {
+                                // Source Account
+                                AccountPickerCard(title: "From", selection: $selectedAccount, accounts: accounts)
+                                
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundStyle(Theme.Colors.secondaryText)
+                                
+                                // Target Account
+                                AccountPickerCard(title: "To", selection: $targetAccount, accounts: accounts)
+                            }
                             
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(Theme.Colors.secondaryText)
-                            
-                            // Target Account
-                            AccountPickerCard(title: "To", selection: $targetAccount, accounts: accounts)
+                            // Note Button (Transfer)
+                            Button {
+                                showNoteInput = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: note.isEmpty ? "text.bubble" : "text.bubble.fill")
+                                    Text(note.isEmpty ? "Add Note" : "Edit Note")
+                                }
+                                .font(Theme.Fonts.body(14))
+                                .foregroundStyle(note.isEmpty ? Theme.Colors.secondaryText : Theme.Colors.mint)
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 16)
+                                .background(Theme.Colors.background)
+                                .clipShape(Capsule())
+                            }
                         }
                         .padding(.horizontal)
                         .transition(.move(edge: .leading).combined(with: .opacity))
@@ -101,31 +121,49 @@ struct AddTransactionView: View {
                     } else {
                         // Standard Layout
                         VStack(spacing: 16) {
-                            // Account Picker
-                            Button {
-                                showAccountSheet = true
-                            } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Account")
-                                            .font(Theme.Fonts.body(12))
-                                            .foregroundStyle(Theme.Colors.secondaryText)
-                                        Text(selectedAccount?.name ?? "Select Account")
-                                            .font(Theme.Fonts.body(16))
+                            // Account Picker & Note
+                            HStack(spacing: 12) {
+                                Button {
+                                    showAccountSheet = true
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Account")
+                                                .font(Theme.Fonts.body(12))
+                                                .foregroundStyle(Theme.Colors.secondaryText)
+                                            Text(selectedAccount?.name ?? "Select Account")
+                                                .font(Theme.Fonts.body(16))
+                                                .foregroundStyle(Theme.Colors.primaryText)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .font(.system(size: 14))
                                             .foregroundStyle(Theme.Colors.primaryText)
                                     }
-                                    Spacer()
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(Theme.Colors.primaryText)
+                                    .padding()
+                                    .background(Theme.Colors.background)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .stroke(Theme.Colors.secondaryText.opacity(0.1), lineWidth: 1)
+                                    )
                                 }
-                                .padding()
-                                .background(Theme.Colors.background)
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(Theme.Colors.secondaryText.opacity(0.1), lineWidth: 1)
-                                )
+                                
+                                // Note Button
+                                Button {
+                                    showNoteInput = true
+                                } label: {
+                                    Image(systemName: note.isEmpty ? "text.bubble" : "text.bubble.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundStyle(note.isEmpty ? Theme.Colors.secondaryText : Theme.Colors.mint)
+                                        .frame(width: 50, height: 60) // Match Account Picker approx height
+                                        .background(Theme.Colors.background)
+                                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .stroke(Theme.Colors.secondaryText.opacity(0.1), lineWidth: 1)
+                                        )
+                                }
                             }
                             .padding(.horizontal, 24)
                         }
@@ -181,6 +219,11 @@ struct AddTransactionView: View {
         }
         .sheet(isPresented: $showAccountSheet) {
             AccountSelectionSheet(selectedAccount: $selectedAccount)
+        }
+        .alert("Add Note", isPresented: $showNoteInput) {
+            TextField("Note", text: $note)
+            Button("Done") {}
+            Button("Cancel", role: .cancel) {}
         }
         .onAppear {
             if !didInitialize {
@@ -246,6 +289,7 @@ struct AddTransactionView: View {
             amount: finalAmount,
             date: Date(),
             type: selectedType,
+            note: note, // Pass the note
             category: selectedType == .transfer ? nil : finalCategory,
             account: selectedAccount,
             transferTargetAccount: targetAccount
@@ -271,6 +315,7 @@ struct AddTransactionView: View {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
         amountString = ""
+        note = "" // Reset note
     }
 }
 

@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct BudgetListView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \Category.name) private var categories: [Category]
     @Query(sort: \Transaction.date) private var allTransactions: [Transaction]
     
@@ -11,6 +12,10 @@ struct BudgetListView: View {
     @State private var categoryToEdit: Category?
     @State private var pendingCategoryEdit: Category?
     @State private var showPastEditAlert = false
+    
+    // Deletion
+    @State private var categoryToDelete: Category?
+    @State private var showDeleteConfirmation = false
     
     // Settings
     @AppStorage("budgetPeriod") private var budgetPeriod: String = "month"
@@ -155,6 +160,14 @@ struct BudgetListView: View {
                                         }
                                         .buttonStyle(.plain) // remove default button flash if desired
                                         .opacity(isPastPeriod ? 1.0 : 1.0) // Maintain visibility
+                                        .contextMenu {
+                                            Button(role: .destructive) {
+                                                categoryToDelete = category
+                                                showDeleteConfirmation = true
+                                            } label: {
+                                                Label("Delete Category", systemImage: "trash")
+                                            }
+                                        }
                                     }
                                 }
                                 .padding(.bottom, 100)
@@ -218,6 +231,16 @@ struct BudgetListView: View {
             .fullScreenCover(item: $categoryToEdit) { category in
                 SetBudgetView(category: category, periodStart: periodDateRange.start, budgetPeriod: budgetPeriod)
             }
+            .confirmationDialog("Delete Category?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    if let category = categoryToDelete {
+                        deleteCategory(category)
+                    }
+                }
+                Button("Cancel", role: .cancel) { categoryToDelete = nil }
+            } message: {
+                Text("Are you sure? This will delete the category and all associated transactions.")
+            }
         }
     }
     
@@ -279,6 +302,11 @@ struct BudgetListView: View {
     
     private var totalBudgetForPeriod: Double {
         categories.reduce(0) { $0 + (effectiveBudget(for: $1) ?? 0) }
+    }
+    
+    private func deleteCategory(_ category: Category) {
+        modelContext.delete(category)
+        categoryToDelete = nil
     }
 }
 

@@ -51,7 +51,7 @@ struct AccountDetailView: View {
                                 .font(Theme.Fonts.body(16))
                                 .foregroundStyle(Theme.Colors.secondaryText)
                             
-                            Text(String(format: "$%.2f", account.balance))
+                            Text(account.balance.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                                 .font(Theme.Fonts.display(40))
                                 .foregroundStyle(Theme.Colors.primaryText)
                         }
@@ -240,7 +240,7 @@ struct AccountTransactionRow: View {
             Spacer()
             
             // Amount
-            Text((isPositive ? "+" : "-") + String(format: "$%.2f", transaction.amount))
+            Text((isPositive ? "+" : "-") + transaction.amount.formatted(.currency(code: CurrencyManager.shared.currencyCode)))
                 .font(Theme.Fonts.body(16))
                 .foregroundStyle(amountColor)
         }
