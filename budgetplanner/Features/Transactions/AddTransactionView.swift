@@ -180,6 +180,7 @@ struct AddTransactionView: View {
                         // Allow keypad to be compact if needed via internal logic, but here assume it fits
                     
                     // MARK: - Save Button
+                    // MARK: - Save Button
                     Button {
                         handleSave()
                     } label: {
@@ -194,6 +195,8 @@ struct AddTransactionView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                             .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
                     }
+                    .disabled(selectedType == .transfer && selectedAccount == targetAccount)
+                    .opacity(selectedType == .transfer && selectedAccount == targetAccount ? 0.6 : 1.0)
                     .padding(.horizontal, 24)
                     .padding(.bottom, 12)
                 }
@@ -277,6 +280,13 @@ struct AddTransactionView: View {
     
     private func handleSave() {
         guard let amountVal = Double(amountString), amountVal > 0 else {
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.error)
+            return
+        }
+        
+        // Prevent transfer to same account
+        if selectedType == .transfer, selectedAccount == targetAccount {
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.error)
             return

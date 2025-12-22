@@ -1,7 +1,11 @@
 import SwiftUI
+import SwiftData
 
 struct OnboardingContainerView: View {
     @Binding var isCompleted: Bool
+    
+    // Check for existing data (CloudKit Sync)
+    @Query private var transactions: [Transaction]
     
     // 0: Welcome
     // 1: Question 1 (Goal)
@@ -71,6 +75,23 @@ struct OnboardingContainerView: View {
                     .padding(.top, 8)
                     .padding(.horizontal, 20)
             }
+        }
+        .onAppear {
+            if !transactions.isEmpty {
+                completeOnboarding()
+            }
+        }
+        .onChange(of: transactions) { _, newTransactions in
+            if !newTransactions.isEmpty {
+                completeOnboarding()
+            }
+        }
+    }
+    
+    private func completeOnboarding() {
+        if !isCompleted {
+            withAnimation { isCompleted = true }
+             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
         }
     }
 }

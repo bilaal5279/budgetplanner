@@ -22,7 +22,8 @@ struct budgetplannerApp: App {
             Category.self,
             Budget.self,
             Account.self,
-            AppPreferences.self
+            AppPreferences.self,
+            BudgetHistory.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -95,11 +96,13 @@ struct budgetplannerApp: App {
                         .zIndex(999)
                 }
             }
+            .background(DataDeduplicator()) // Reactive deduplication
             .onChange(of: scenePhase) { oldPhase, newPhase in
                 if newPhase == .background {
                     biometricManager.applicationDidEnterBackground()
                 } else if newPhase == .active {
                     biometricManager.checkLockRequirement()
+                    // Deduplication is now handled effectively by DataDeduplicator's onChange
                 }
             }
         }
@@ -111,6 +114,70 @@ struct budgetplannerApp: App {
         case .system: return nil
         case .light: return .light
         case .dark: return .dark
+        }
+    }
+}
+
+// MARK: - Reactive Deduplicator
+struct DataDeduplicator: View {
+    @Environment(\.modelContext) private var context
+    @Query private var categories: [Category]
+    @Query private var accounts: [Account]
+    
+    var body: some View {
+        EmptyView()
+            .onChange(of: categories) { _, _ in
+                deduplicate()
+            }
+            .onChange(of: accounts) { _, _ in
+                deduplicate()
+            }
+    }
+    
+    private func deduplicate() {
+        do {
+            // 1. Deduplicate Categories (Target specific default names)
+            let defaultNames = ["Food", "Transport", "Shopping", "Entertainment"]
+            let categoryDescriptor = FetchDescriptor<Category>(predicate: #Predicate { defaultNames.contains($0.name) })
+            let categories = try context.fetch(categoryDescriptor)
+            
+            let groupedCategories = Dictionary(grouping: categories, by: { $0.name })
+            
+            for (_, duplicates) in groupedCategories where duplicates.count > 1 {
+                let sorted = duplicates.sorted { (a, b) in
+                    return (a.isCustom ? 1 : 0) < (b.isCustom ? 1 : 0)
+                }
+                
+                let winner = sorted.first!
+                let losers = sorted.dropFirst()
+                
+                if winner.isCustom { winner.isCustom = false }
+                
+                for item in losers {
+                    context.delete(item)
+                }
+            }
+            
+            // 2. Deduplicate Accounts (Specific Names)
+            let accountDescriptor = FetchDescriptor<Account>()
+            let accounts = try context.fetch(accountDescriptor)
+            
+            let targetAccountNames = ["Bank Card", "Cash"]
+            let interestingAccounts = accounts.filter { targetAccountNames.contains($0.name) }
+            
+            let groupedAccounts = Dictionary(grouping: interestingAccounts, by: { $0.name })
+            
+            for (_, duplicates) in groupedAccounts where duplicates.count > 1 {
+                let toDelete = duplicates.dropFirst()
+                for item in toDelete {
+                    context.delete(item)
+                }
+            }
+            
+            try context.save()
+            
+        } catch {
+            print("Deduplication error: \(error)")
         }
     }
 }
