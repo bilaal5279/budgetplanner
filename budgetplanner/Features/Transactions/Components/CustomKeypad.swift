@@ -17,14 +17,15 @@ struct CustomKeypad: View {
     ]
     
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 20) {
+        LazyVGrid(columns: columns, spacing: 12) { // Increased spacing
             ForEach(keys, id: \.self) { key in
                 KeypadButton(key: key) {
                     handleKeyPress(key)
                 }
             }
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.vertical, 8)
     }
     
     private func handleKeyPress(_ key: String) {
@@ -54,20 +55,20 @@ struct KeypadButton: View {
     var body: some View {
         Button(action: action) {
             ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Theme.Colors.secondaryBackground.opacity(0.3)) // Subtler background
+                RoundedRectangle(cornerRadius: 14) // Increased radius
+                    .fill(Theme.Colors.secondaryBackground.opacity(0.3))
                 
                 if key == "delete.left" {
                     Image(systemName: key)
-                        .font(.title3)
+                        .font(.title3) // Larger icon
                         .foregroundStyle(Theme.Colors.primaryText)
                 } else {
                     Text(key)
-                        .font(Theme.Fonts.display(24))
+                        .font(Theme.Fonts.display(24)) // Larger text
                         .foregroundStyle(Theme.Colors.primaryText)
                 }
             }
-            .frame(width: 60, height: 50) // Much shorter
+            .frame(height: 46) // Compact but usable
         }
         .buttonStyle(KeypadButtonStyle())
     }

@@ -21,171 +21,167 @@ struct OnboardingPaywallView: View {
         ZStack(alignment: .topTrailing) {
             GridBackground()
             
-            VStack(spacing: 0) {
-                // Header
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "crown.fill")
-                            .foregroundStyle(Theme.Colors.mint)
-                        Text("PREMIUM ACCESS")
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Theme.Colors.mint)
-                            .tracking(2)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Theme.Colors.mint.opacity(0.1))
-                    .clipShape(Capsule())
-                    
-                    Text("Unlock Full\nPotential")
-                        .font(Theme.Fonts.display(40))
-                        .foregroundStyle(Theme.Colors.primaryText)
-                        .lineSpacing(-4)
-                    
-                    Text("Join 50,000+ users building their financial future.")
-                        .font(Theme.Fonts.body(15))
-                        .foregroundStyle(Theme.Colors.secondaryText)
-                    
-                    // Benefits List (Premium Emoji Style)
-                    VStack(alignment: .leading, spacing: 16) {
-                        BenefitRow(emoji: "🏦", text: "Unlimited Accounts & Wallets")
-                        BenefitRow(emoji: "📊", text: "Advanced Analytics & Charts")
-                        BenefitRow(emoji: "☁️", text: "Cloud Sync & CSV Export")
-                        BenefitRow(emoji: "🏷️", text: "Unlimited Custom Categories")
-                        BenefitRow(emoji: "🔒", text: "Face ID & App Lock")
-                    }
-                    .padding(.top, 24)
-                    .padding(.bottom, 10)
-                    .padding(.top, 20)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 24)
-                .padding(.top, 60)
-                
-                Spacer()
-                
-                // Content Section
-                if let offering = subscriptionManager.currentOffering {
-                    VStack(spacing: 24) {
-                        
-                        // Specific Plan Cards (Vertical Stack)
-                        VStack(spacing: 16) {
-                            // Weekly Card (HAS TRIAL)
-                            if let weeklyPackage = offering.package(identifier: "$rc_weekly") {
-                                BlueprintPlanCard(
-                                    title: "Weekly Plan",
-                                    price: weeklyPackage.storeProduct.localizedPriceString,
-                                    subtitle: "/ week",
-                                    badge: "3 DAY TRIAL",
-                                    isSelected: selectedPlan == .weekly,
-                                    onTap: { selectedPlan = .weekly }
-                                )
-                            }
-                            
-                            // Yearly Card (NO TRIAL)
-                            if let yearlyPackage = offering.package(identifier: "$rc_annual") {
-                                BlueprintPlanCard(
-                                    title: "Yearly Plan",
-                                    price: yearlyPackage.storeProduct.localizedPriceString,
-                                    subtitle: "/ year",
-                                    badge: nil, // Removed badge
-                                    isSelected: selectedPlan == .yearly,
-                                    onTap: { selectedPlan = .yearly }
-                                )
-                            }
-                        }
-                        
-                        // Trial Toggle (Moved Below Plans)
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 0) {
+                    // MARK: - Header Section
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Enable Free Trial")
-                                    .font(Theme.Fonts.body(16).weight(.medium))
-                                    .foregroundStyle(Theme.Colors.primaryText)
-                                Text("No payment required today, cancel anytime.") // Updated Text
-                                    .font(Theme.Fonts.body(12))
-                                    .foregroundStyle(Theme.Colors.secondaryText)
-                            }
-                            
-                            Spacer()
-                            
-                            Toggle("", isOn: Binding(
-                                get: { selectedPlan == .weekly },
-                                set: { if $0 { selectedPlan = .weekly } else { selectedPlan = .yearly } }
-                            ))
-                            .labelsHidden()
-                            .tint(Theme.Colors.mint)
+                            Image(systemName: "crown.fill")
+                                .foregroundStyle(Theme.Colors.mint)
+                            Text("PREMIUM ACCESS")
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Theme.Colors.mint)
+                                .tracking(2)
                         }
-                        .padding()
-                        .background(
-                            ZStack {
-                                Theme.Colors.secondaryBackground.opacity(0.3)
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(Theme.Colors.secondaryText.opacity(0.1), lineWidth: 1)
-                            }
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 24)
-                    
-                    // CTA Button
-                    Button {
-                        purchaseSelectedPlan()
-                    } label: {
-                        VStack(spacing: 4) {
-                            if subscriptionManager.isLoading {
-                                ProgressView()
-                                    .tint(Theme.Colors.background)
-                            } else {
-                                Text(selectedPlan == .weekly ? "Start 3-Day Free Trial" : "Subscribe Now")
-                                    .font(Theme.Fonts.body(18).weight(.bold))
-                                
-                                // Dynamic Subtext
-                                if selectedPlan == .weekly, let price = offering.package(identifier: "$rc_weekly")?.storeProduct.localizedPriceString {
-                                    Text("then \(price)/week")
-                                        .font(Theme.Fonts.body(12))
-                                        .opacity(0.8)
-                                } else if let price = offering.package(identifier: "$rc_annual")?.storeProduct.localizedPriceString {
-                                    Text("Just \(price)/year")
-                                        .font(Theme.Fonts.body(12))
-                                        .opacity(0.8)
-                                }
-                            }
-                        }
-                        .foregroundStyle(Theme.Colors.background)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Theme.Colors.primaryText)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .shadow(color: Theme.Colors.primaryText.opacity(0.3), radius: 20, x: 0, y: 10)
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 16)
-                    .disabled(subscriptionManager.isLoading)
-                } else {
-                    // Loading State for Offerings
-                    VStack {
-                        ProgressView()
-                            .tint(Theme.Colors.mint)
-                        Text("Loading offers...")
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Theme.Colors.mint.opacity(0.1))
+                        .clipShape(Capsule())
+                        .padding(.top, 20) // Extra buffer
+                        
+                        Text("Unlock Full\nPotential")
+                            .font(Theme.Fonts.display(36))
+                            .foregroundStyle(Theme.Colors.primaryText)
+                            .lineSpacing(-4)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
+                        Text("Join 50,000+ users building their financial future.")
                             .font(Theme.Fonts.body(14))
                             .foregroundStyle(Theme.Colors.secondaryText)
+                        
+                        // Benefits List
+                        VStack(alignment: .leading, spacing: 12) {
+                            BenefitRow(emoji: "🏦", text: "Unlimited Accounts & Wallets")
+                            BenefitRow(emoji: "📊", text: "Advanced Analytics & Charts")
+                            BenefitRow(emoji: "☁️", text: "Cloud Sync & CSV Export")
+                            BenefitRow(emoji: "🏷️", text: "Unlimited Custom Categories")
+                            BenefitRow(emoji: "🔒", text: "Face ID & App Lock")
+                        }
+                        .padding(.top, 16)
                     }
-                    .frame(height: 300)
-                }
-                
-                // Terms
-                HStack(spacing: 16) {
-                    Link("Terms", destination: URL(string: "https://digitalsprout.org/pocketwealth/terms-of-service")!)
-                    Link("Privacy", destination: URL(string: "https://digitalsprout.org/pocketwealth/privacy-policy")!)
-                    Button("Restore") {
-                        restorePurchases()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 60) // Clear Close Button
+                    
+                    Spacer(minLength: 20)
+                    
+                    // MARK: - Content Section
+                    if let offering = subscriptionManager.currentOffering {
+                        VStack(spacing: 16) {
+                            
+                            // Plans
+                            VStack(spacing: 12) {
+                                if let weeklyPackage = offering.package(identifier: "$rc_weekly") {
+                                    BlueprintPlanCard(
+                                        title: "Weekly Plan",
+                                        price: weeklyPackage.storeProduct.localizedPriceString,
+                                        subtitle: "/ week",
+                                        badge: "3 DAY TRIAL",
+                                        isSelected: selectedPlan == .weekly,
+                                        onTap: { selectedPlan = .weekly }
+                                    )
+                                }
+                                
+                                if let yearlyPackage = offering.package(identifier: "$rc_annual") {
+                                    BlueprintPlanCard(
+                                        title: "Yearly Plan",
+                                        price: yearlyPackage.storeProduct.localizedPriceString,
+                                        subtitle: "/ year",
+                                        badge: nil,
+                                        isSelected: selectedPlan == .yearly,
+                                        onTap: { selectedPlan = .yearly }
+                                    )
+                                }
+                            }
+                            
+                            // Trial Toggle
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Enable Free Trial")
+                                        .font(Theme.Fonts.body(18).weight(.semibold)) // Increased Size
+                                        .foregroundStyle(Theme.Colors.primaryText)
+                                    Text("No payment required today, cancel anytime.")
+                                        .font(Theme.Fonts.body(12)) // Slightly bigger subtext
+                                        .foregroundStyle(Theme.Colors.secondaryText)
+                                }
+                                
+                                Spacer()
+                                
+                                Toggle("", isOn: Binding(
+                                    get: { selectedPlan == .weekly },
+                                    set: { if $0 { selectedPlan = .weekly } else { selectedPlan = .yearly } }
+                                ))
+                                .labelsHidden()
+                                .tint(Theme.Colors.mint)
+                            }
+                            .padding()
+                            .background(
+                                ZStack {
+                                    Theme.Colors.secondaryBackground.opacity(0.3)
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Theme.Colors.secondaryText.opacity(0.1), lineWidth: 1)
+                                }
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        }
+                        .padding(.horizontal, 24)
+                        
+                        Spacer(minLength: 20)
+                        
+                        // CTA Button
+                        Button {
+                            purchaseSelectedPlan()
+                        } label: {
+                            VStack(spacing: 2) {
+                                if subscriptionManager.isLoading {
+                                    ProgressView()
+                                        .tint(Theme.Colors.background)
+                                } else {
+                                    Text(selectedPlan == .weekly ? "Start 3-Day Free Trial" : "Subscribe Now")
+                                        .font(Theme.Fonts.body(18).weight(.bold))
+                                    
+                                    if selectedPlan == .weekly, let price = offering.package(identifier: "$rc_weekly")?.storeProduct.localizedPriceString {
+                                        Text("then \(price)/week")
+                                            .font(Theme.Fonts.body(11))
+                                            .opacity(0.8)
+                                    } else if let price = offering.package(identifier: "$rc_annual")?.storeProduct.localizedPriceString {
+                                        Text("Just \(price)/year")
+                                            .font(Theme.Fonts.body(11))
+                                            .opacity(0.8)
+                                    }
+                                }
+                            }
+                            .foregroundStyle(Theme.Colors.background)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Theme.Colors.primaryText)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .shadow(color: Theme.Colors.primaryText.opacity(0.3), radius: 20, x: 0, y: 10)
+                        }
+                        .padding(.horizontal, 24)
+                        .disabled(subscriptionManager.isLoading)
+                    } else {
+                        VStack {
+                            ProgressView().tint(Theme.Colors.mint)
+                            Text("Loading offers...")
+                                .font(Theme.Fonts.body(14))
+                                .foregroundStyle(Theme.Colors.secondaryText)
+                        }.frame(height: 200)
+                        Spacer()
                     }
+                    
+                    // Terms
+                    HStack(spacing: 16) {
+                        Link("Terms", destination: URL(string: "https://digitalsprout.org/pocketwealth/terms-of-service")!)
+                        Link("Privacy", destination: URL(string: "https://digitalsprout.org/pocketwealth/privacy-policy")!)
+                        Button("Restore") { restorePurchases() }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Theme.Colors.secondaryText)
+                    .padding(.vertical, 30) // More bottom padding for scroll scrolling
                 }
-                .font(.caption)
-                .foregroundStyle(Theme.Colors.secondaryText)
-                .padding(.bottom, 20)
             }
+            .scrollBounceBehavior(.basedOnSize) // Only scroll if needed (iOS 16.4+)
             
             // Close Button Area (Loader -> X)
             ZStack {
@@ -195,24 +191,23 @@ struct OnboardingPaywallView: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(Theme.Colors.background) // Invert for high contrast
+                            .foregroundStyle(Theme.Colors.background)
                             .padding(12)
-                            .background(Theme.Colors.primaryText) // Max contrast (Black light / White dark)
+                            .background(Theme.Colors.primaryText)
                             .clipShape(Circle())
                     }
                     .transition(.scale.combined(with: .opacity))
                 } else {
-                    // Loading Circle
                     Circle()
                         .trim(from: 0, to: countdownValue)
-                        .stroke(Theme.Colors.primaryText, lineWidth: 3) // Thicker and High Contrast
+                        .stroke(Theme.Colors.primaryText, lineWidth: 3)
                         .frame(width: 24, height: 24)
                         .rotationEffect(.degrees(-90))
                         .padding(8)
                         .transition(.opacity)
                 }
             }
-            .padding(.top, 60) // Safe area
+            .padding(.top, 20) // Increased safe area buffer for Close Button
             .padding(.trailing, 24)
         }
         .onAppear {
@@ -278,6 +273,7 @@ struct OnboardingPaywallView: View {
         generator.notificationOccurred(.success)
         withAnimation { isCompleted.toggle() }
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        UserDefaults.standard.set(false, forKey: "forceShowOnboarding")
     }
 }
 

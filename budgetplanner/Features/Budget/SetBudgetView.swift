@@ -22,50 +22,55 @@ struct SetBudgetView: View {
             ZStack {
                 Theme.Colors.background.ignoresSafeArea()
                 
-                VStack(spacing: 40) {
-                    // Header Icon
-                    ZStack {
-                        Circle()
-                            .fill(Color(hex: category.colorHex).opacity(0.1))
-                            .frame(width: 80, height: 80)
-                        
-                        Image(systemName: category.icon)
-                            .font(.system(size: 32))
-                            .foregroundStyle(Color(hex: category.colorHex))
-                    }
-                    .padding(.top, 40)
-                    
-                    // Amount Display
-                    VStack(spacing: 8) {
-                        Text("Monthly Budget")
-                            .font(Theme.Fonts.body(16))
-                            .foregroundStyle(Theme.Colors.secondaryText)
-                        
-                        Text(currencyString)
-                            .font(Theme.Fonts.display(64))
-                            .foregroundStyle(Theme.Colors.primaryText)
-                            .contentTransition(.numericText())
-                    }
-                    
-                    Spacer()
-                    
-                    // Keypad
-                    CustomKeypad(input: $amountString)
-                    
-                    // Save Button
-                    Button {
-                        saveBudget()
-                    } label: {
-                        Text("Set")
-                            .font(Theme.Fonts.display(18))
-                            .foregroundStyle(Theme.Colors.background)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Theme.Colors.primaryText)
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                            .shadow(color: Theme.Colors.primaryText.opacity(0.3), radius: 10, x: 0, y: 5)
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 20)
+                GeometryReader { geometry in
+                    ScrollView {
+                        VStack(spacing: 40) {
+                            // Header Icon
+                            ZStack {
+                                Circle()
+                                    .fill(Color(hex: category.colorHex).opacity(0.1))
+                                    .frame(width: 80, height: 80)
+                                
+                                Image(systemName: category.icon)
+                                    .font(.system(size: 32))
+                                    .foregroundStyle(Color(hex: category.colorHex))
+                            }
+                            .padding(.top, 40)
+                            
+                            // Amount Display
+                            VStack(spacing: 8) {
+                                Text("Monthly Budget")
+                                    .font(Theme.Fonts.body(16))
+                                    .foregroundStyle(Theme.Colors.secondaryText)
+                                
+                                Text(currencyString)
+                                    .font(Theme.Fonts.display(64))
+                                    .foregroundStyle(Theme.Colors.primaryText)
+                                    .contentTransition(.numericText())
+                            }
+                            
+                            Spacer()
+                            
+                            // Keypad
+                            CustomKeypad(input: $amountString)
+                            
+                            // Save Button
+                            Button {
+                                saveBudget()
+                            } label: {
+                                Text("Set")
+                                    .font(Theme.Fonts.display(18))
+                                    .foregroundStyle(Theme.Colors.background)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 56)
+                                    .background(Theme.Colors.primaryText)
+                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                                    .shadow(color: Theme.Colors.primaryText.opacity(0.3), radius: 10, x: 0, y: 5)
+                                    .padding(.horizontal, 24)
+                                    .padding(.bottom, 20)
+                            }
+                        }
+                        .frame(minHeight: geometry.size.height)
                     }
                 }
             }

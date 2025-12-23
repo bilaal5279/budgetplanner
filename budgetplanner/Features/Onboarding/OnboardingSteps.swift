@@ -53,7 +53,7 @@ struct WelcomeView: View {
             
             VStack(spacing: 0) {
                 // MARK: - Top Typography
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Image(systemName: "compass.drawing") // Technical icon
                             .foregroundStyle(Theme.Colors.mint)
@@ -63,18 +63,19 @@ struct WelcomeView: View {
                             .tracking(2)
                             .foregroundStyle(Theme.Colors.secondaryText)
                     }
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 4)
                     
                     Text("DESIGN YOUR")
-                        .font(Theme.Fonts.body(16).weight(.bold))
+                        .font(Theme.Fonts.body(14).weight(.bold))
                         .tracking(4)
                         .foregroundStyle(Theme.Colors.secondaryText)
                     
                     Text("Financial\nFuture")
-                        .font(Theme.Fonts.display(52)) // Massive
+                        .font(Theme.Fonts.display(44))
                         .foregroundStyle(Theme.Colors.primaryText)
                         .lineSpacing(-4)
-                        .minimumScaleFactor(0.5) // Prevent truncation
+                        .minimumScaleFactor(0.3)
+                        .fixedSize(horizontal: false, vertical: true)
                         .overlay(
                             // Decoration Line
                             Rectangle()
@@ -86,7 +87,8 @@ struct WelcomeView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 32)
-                .padding(.top, 60)
+                .padding(.top, 10) // Minimal top padding
+                .layoutPriority(1) // Keep header visible
                 
                 Spacer()
                 
@@ -104,15 +106,15 @@ struct WelcomeView: View {
                     Image(colorScheme == .dark ? "onboarding_hero_dark" : "onboarding_hero")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 320)
-                        .blendMode(colorScheme == .dark ? .normal : .multiply) // Multiply only for light mode
+                        .frame(maxWidth: 300, maxHeight: 400) // Constrain max size
+                        .blendMode(colorScheme == .dark ? .normal : .multiply) 
                         .offset(y: isAnimating ? -10 : 5)
                         .animation(
                             .easeInOut(duration: 4.0).repeatForever(autoreverses: true),
                             value: isAnimating
                         )
                 }
-                .padding(.vertical, 20)
+                .padding(.vertical, 10)
                 
                 Spacer()
                 
@@ -128,19 +130,20 @@ struct WelcomeView: View {
                     }
                     .foregroundStyle(Theme.Colors.primaryText)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 64)
+                    .frame(height: 60)
                     .background(
                         ZStack {
                             Theme.Colors.background.opacity(0.8) // Glass base
-                            RoundedRectangle(cornerRadius: 32)
+                            RoundedRectangle(cornerRadius: 30)
                                 .stroke(Theme.Colors.secondaryText.opacity(0.2), lineWidth: 1)
                         }
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 32))
+                    .clipShape(RoundedRectangle(cornerRadius: 30))
                     .shadow(color: Color.black.opacity(0.05), radius: 20, x: 0, y: 10)
                 }
                 .padding(.horizontal, 32)
-                .padding(.bottom, 50)
+                .padding(.bottom, 30) // Reduced from 50
+                .padding(.bottom, 20) // Safe area buffer
             }
         }
         .onAppear {

@@ -77,12 +77,14 @@ struct OnboardingContainerView: View {
             }
         }
         .onAppear {
-            if !transactions.isEmpty {
+            let forceShow = UserDefaults.standard.bool(forKey: "forceShowOnboarding")
+            if !forceShow && !transactions.isEmpty {
                 completeOnboarding()
             }
         }
         .onChange(of: transactions) { _, newTransactions in
-            if !newTransactions.isEmpty {
+            let forceShow = UserDefaults.standard.bool(forKey: "forceShowOnboarding")
+            if !forceShow && !newTransactions.isEmpty {
                 completeOnboarding()
             }
         }

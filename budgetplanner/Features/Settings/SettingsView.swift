@@ -339,6 +339,7 @@ struct SettingsView: View {
                 Section("Developer") {
                     Button("Reset Onboarding") {
                         UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+                        UserDefaults.standard.set(true, forKey: "forceShowOnboarding")
                         // Optional: Quit app or show alert
                     }
                     
