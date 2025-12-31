@@ -47,6 +47,8 @@ struct AddTransactionView: View {
                                     if type == .income {
                                         if let bankCard = accounts.first(where: { $0.name == "Bank Card" }) {
                                             selectedAccount = bankCard
+                                        } else {
+                                            selectedAccount = accounts.first
                                         }
                                     }
                                 }

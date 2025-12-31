@@ -149,19 +149,31 @@ struct SettingsView: View {
                     
                     // Face ID (Premium)
                     // Face ID (Premium)
-                    NavigationLink(destination: AppLockSettingsView(subscriptionManager: subscriptionManager, showPaywall: $showPaywall)) {
-                        HStack {
-                            Image(systemName: "faceid")
-                                .foregroundStyle(Theme.Colors.mint)
-                                .frame(width: 24)
-                            Text("App Lock")
-                            Spacer()
-                            if !subscriptionManager.isPremium {
+                    // Face ID (Premium)
+                    if subscriptionManager.isPremium {
+                        NavigationLink(destination: AppLockSettingsView(subscriptionManager: subscriptionManager, showPaywall: $showPaywall)) {
+                            HStack {
+                                Image(systemName: "faceid")
+                                    .foregroundStyle(Theme.Colors.mint)
+                                    .frame(width: 24)
+                                Text("App Lock")
+                                Spacer()
+                                Text(useFaceID ? "On" : "Off")
+                                    .foregroundStyle(Theme.Colors.secondaryText)
+                            }
+                        }
+                    } else {
+                        Button {
+                            showPaywall = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "faceid")
+                                    .foregroundStyle(Theme.Colors.mint)
+                                    .frame(width: 24)
+                                Text("App Lock")
+                                Spacer()
                                 Image(systemName: "lock.fill")
                                     .font(.caption)
-                                    .foregroundStyle(Theme.Colors.secondaryText)
-                            } else {
-                                Text(useFaceID ? "On" : "Off")
                                     .foregroundStyle(Theme.Colors.secondaryText)
                             }
                         }
@@ -289,7 +301,7 @@ struct SettingsView: View {
                 
                 // MARK: - Support
                 Section("Support") {
-                    Link(destination: URL(string: "https://apps.apple.com/app/id6756530207?action=write-review")!) {
+                    Link(destination: URL(string: "https://apps.apple.com/app/id6756803830?action=write-review")!) {
                         HStack {
                             Image(systemName: "star.fill")
                                 .foregroundStyle(.yellow)
@@ -357,7 +369,7 @@ struct SettingsView: View {
                             Text("PocketWealth")
                                 .font(.headline)
                                 .foregroundStyle(Theme.Colors.primaryText)
-                            Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                            Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1")")
                                 .font(.caption)
                                 .foregroundStyle(Theme.Colors.secondaryText)
                         }

@@ -11,6 +11,8 @@ struct CategorySelectionSheet: View {
     
     @State private var showingAddCategory = false
     @State private var categoryToEdit: Category?
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
+    @State private var showPaywall = false
     
     var body: some View {
         NavigationStack {
@@ -18,7 +20,12 @@ struct CategorySelectionSheet: View {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 20) {
                     // Add New Button
                     Button {
-                        showingAddCategory = true
+                        let customCount = categories.filter { $0.isCustom }.count
+                        if !subscriptionManager.isPremium && customCount >= 1 {
+                             showPaywall = true
+                        } else {
+                            showingAddCategory = true
+                        }
                     } label: {
                         VStack(spacing: 8) {
                             Circle()
@@ -80,6 +87,9 @@ struct CategorySelectionSheet: View {
             }
             .sheet(isPresented: $showingAddCategory) {
                 AddCategoryView()
+            }
+            .fullScreenCover(isPresented: $showPaywall) {
+                OnboardingPaywallView(isCompleted: $showPaywall)
             }
         }
         .presentationDetents([.medium, .large])

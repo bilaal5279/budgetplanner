@@ -5,7 +5,7 @@ struct BudgetListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Category.name) private var categories: [Category]
     @Query(sort: \Transaction.date) private var allTransactions: [Transaction]
-    @StateObject private var subscriptionManager = SubscriptionManager.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
     
     @State private var isPresentingAddCategory = false
     @State private var showPaywall = false
@@ -220,6 +220,7 @@ struct BudgetListView: View {
                     } label: {
                         Image(systemName: "plus")
                             .foregroundStyle(Theme.Colors.primaryText)
+                            .contentShape(Rectangle())
                     }
                 }
             }

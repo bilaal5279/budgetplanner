@@ -82,9 +82,7 @@ struct AccountsView: View {
                     }
                 }
                 
-                ToolbarItem(placement: .topBarLeading) {
-                    EditButton()
-                }
+
             }
             .sheet(isPresented: $isPresentingAddAccount) {
                  AddAccountView()
